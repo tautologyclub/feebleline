@@ -1,6 +1,4 @@
 # feebleline
-Going full Luddite by removing the mode-line and using echo-area (smartly) instead.
-
 For hardline Luddite editing!
 
 Feebleline removes the modeline and replaces it with a slimmer proxy
