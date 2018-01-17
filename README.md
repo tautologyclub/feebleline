@@ -31,3 +31,6 @@ them!
 
 New screenshot :
 ![Alt text](scrot2.png?raw=true "Screenshot2")
+
+How it looks when the file has been modified:
+![Alt text](scrot3.png?raw=true "Screenshot3")
