@@ -30,7 +30,7 @@ anyone has any ideas for nicer default faces, let me know and I'll consider
 them!
 
 New screenshot :
-![Alt text](scrot2.png?raw=true "Screenshot2")
+![ScreenShot](scrot2.png)
 
 How it looks when the file has been modified:
-![Alt text](scrot3.png?raw=true "Screenshot3")
+![ScreenShot](scrot3.png)
