@@ -67,6 +67,9 @@
 (defface feebleline-filename-face '((t :foreground "#fce94e"))
   "Feebleline filename face."
   :group 'feebleline-mode)
+(defface feebleline-asterisk-face '((t :foreground "salmon"))
+  "Feebleline filename face."
+  :group 'feebleline-mode)
 
 ;; Note: ugly parentheses, for the simple reason that it makes it easier to
 ;; transpose, add and comment out lines.
@@ -77,7 +80,8 @@
     ("%s"       ("," ) (face default))
     ("%s) "     ((current-column)) (face feebleline-linum-face))
     ("%s"       ("") (face default))
-    ("%s "      ((buffer-file-name)) (face feebleline-filename-face))
+    ("%s"       ((buffer-file-name)) (face feebleline-filename-face))
+    ("%s"       ((if (buffer-modified-p) "*" "" )) (face feebleline-asterisk-face))
     )
   "Each element is a list with the following format:
 
