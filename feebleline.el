@@ -57,18 +57,35 @@
 (require 'advice)
 (defvar feebleline/mode-line-format-default)
 (defvar feebleline/timer)
+
+(defface feebleline-time-face '((t :inherit 'default :foreground "#73d217"))
+  "Feebleline timestamp face."
+  :group 'feebleline-mode)
+(defface feebleline-linum-face '((t :inherit 'default))
+  "Feebleline linum face."
+  :group 'feebleline-mode)
+(defface feebleline-filename-face '((t :foreground "#fce94e"))
+  "Feebleline filename face."
+  :group 'feebleline-mode)
+
+;; Note: ugly parentheses, for the simple reason that it makes it easier to
+;; transpose, add and comment out lines.
 (defvar feebleline-mode-line-text
-  '(("[%s] " ((format-time-string "%H:%M:%S")) (face font-lock-comment-face))
-    ("%s/%s " ((string-to-number (format-mode-line "%l"))
-               (current-column)))
-    ("@ %s " ((buffer-file-name))))
+  '(
+    ("[%s] "    ((format-time-string "%H:%M:%S")) (face feebleline-time-face))
+    ("(%s"      ((string-to-number (format-mode-line "%l"))) (face feebleline-linum-face))
+    ("%s"       ("," ) (face default))
+    ("%s) "     ((current-column)) (face feebleline-linum-face))
+    ("%s"       ("") (face default))
+    ("%s "      ((buffer-file-name)) (face feebleline-filename-face))
+    )
   "Each element is a list with the following format:
 
     (FORMAT-STRING FORMAT-ARGS PROPS)
 
 FORMAT-STRING will be used as the first argument to `format', and
 FORMAT-ARGS (a list) will be expanded as the rest of `format'
-arguments. If PROPS is given, it should be a list which will be
+arguments.  If PROPS is given, it should be a list which will be
 sent to `add-text-properties'.")
 
 (defun feebleline-default-settings ()

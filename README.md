@@ -24,5 +24,10 @@ version supports it, just place the following in your init file:
 Otherwise, do (feebleline-mode t) instead, but be warned that I'm not sure
 if it will look good.
 
-Screenshot:
-![Alt text](scrot1.png?raw=true "Screenshot1")
+Note: Code graciously improved by *Kungsgeten*. I tweaked it a little bit more
+to make it easier to customize colors etc and defined some default faces. If
+anyone has any ideas for nicer default faces, let me know and I'll consider
+them!
+
+New screenshot :
+![Alt text](scrot2.png?raw=true "Screenshot2")
