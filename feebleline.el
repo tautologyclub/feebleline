@@ -1,11 +1,10 @@
-;;; package --- summary
-;;; feebleline.el
+;;; feebleline.el --- Replace modeline with a slimmer proxy
 
 ;; Copyright 2018 Benjamin Lindqvist
 
 ;; Author: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; Maintainer: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
-;; URL: https://github.com/tautologyclub/feeblel
+;; URL: https://github.com/tautologyclub/feebleline
 ;; Package-Version:
 ;; Version: 1.0
 
@@ -34,6 +33,8 @@
 ;; for anything else (but if you switch frame/window, it will replace whatever
 ;; message is currently displayed).
 
+;; To customize feebleline's format, modify `feebleline-mode-line-text'.
+
 ;; NOTE:
 ;; feebleline.el will look considerably better with the following
 ;; settings:
@@ -56,7 +57,19 @@
 (require 'advice)
 (defvar feebleline/mode-line-format-default)
 (defvar feebleline/timer)
-(defvar feebleline/default-log-max)
+(defvar feebleline-mode-line-text
+  '(("[%s] " ((format-time-string "%H:%M:%S")) (face font-lock-comment-face))
+    ("%s/%s " ((string-to-number (format-mode-line "%l"))
+               (current-column)))
+    ("@ %s " ((buffer-file-name))))
+  "Each element is a list with the following format:
+
+    (FORMAT-STRING FORMAT-ARGS PROPS)
+
+FORMAT-STRING will be used as the first argument to `format', and
+FORMAT-ARGS (a list) will be expanded as the rest of `format'
+arguments. If PROPS is given, it should be a list which will be
+sent to `add-text-properties'.")
 
 (defun feebleline-default-settings ()
   "Some default settings that works well with feebleline."
@@ -72,47 +85,41 @@
   (if feebleline-mode
       (progn
         (setq feebleline/mode-line-format-default mode-line-format)
-        (setq feebleline/timer (run-with-timer 0 0.1 'mode-line-proxy-fn))
+        (setq feebleline/timer (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
         (custom-set-variables '(mode-line-format nil))
         (ad-activate 'handle-switch-frame)
-        (add-hook 'focus-in-hook 'mode-line-proxy-fn))
+        (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
     (custom-set-variables
      '(mode-line-format feebleline/mode-line-format-default))
     (cancel-timer feebleline/timer)
     (ad-deactivate 'handle-switch-frame)
-    (remove-hook 'focus-in-hook 'mode-line-proxy-fn)))
+    (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)))
 
-;; (defvar msg-string)
-;; (defun mode-line-proxy-string-fn () (interactive)
-;;   "Hej."
-;;   (setq msg-string (concat "a" "b"))
-;;   (message "%s" msg-string))
+(defun feebleline--mode-line-part (part)
+  "Return a PART (an element) of `feebleline-mode-line-text` as a propertized string."
+  (let ((text (apply #'format (append (list (car part))
+                                      (mapcar #'eval (cadr part)))))
+        (props (elt part 2)))
+    (when props
+      (add-text-properties 0 (length text) props text))
+    text))
 
-(defun message-buffer-file-name-or-nothing ()
+(defun feebleline-message-buffer-file-name-or-nothing ()
   "Replace echo-area message with mode-line proxy."
-  (setq feebleline/default-log-max message-log-max)
-  (unwind-protect
-      (progn
-        (setq message-log-max nil)
-        (if buffer-file-name
-            (message "[%s] %s/%s @ %s"
-                     (format-time-string "%H:%M:%S")
-                     (string-to-number (format-mode-line "%l"))
-                     (current-column)
-                     (buffer-file-name))))
-    (setq message-log-max feebleline/default-log-max)))
+  (when buffer-file-name
+    (let ((message-log-max nil))
+      (message (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text "")))))
 
-(defun mode-line-proxy-fn ()
+(defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
-  (if (not (current-message))
-      (message-buffer-file-name-or-nothing)))
+  (unless (current-message)
+    (feebleline-message-buffer-file-name-or-nothing)))
 
 (defadvice handle-switch-frame (after switch-frame-message-name)
   "Get the modeline proxy to work with i3 switch focus."
-  (message-buffer-file-name-or-nothing)
+  (feebleline-message-buffer-file-name-or-nothing)
   ad-do-it
-  (message-buffer-file-name-or-nothing))
+  (feebleline-message-buffer-file-name-or-nothing))
 
 (provide 'feebleline)
-
 ;;; feebleline.el ends here
