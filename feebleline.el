@@ -106,7 +106,7 @@ sent to `add-text-properties'.")
   (if feebleline-mode
       (progn
         (setq feebleline/mode-line-format-default mode-line-format)
-        (setq feebleline/timer (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
+        (setq feebleline/timer (run-with-timer 0 1 'feebleline-mode-line-proxy-fn))
         (custom-set-variables '(mode-line-format nil))
         (ad-activate 'handle-switch-frame)
         (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
@@ -125,11 +125,17 @@ sent to `add-text-properties'.")
       (add-text-properties 0 (length text) props text))
     text))
 
+(defvar feebleline-placeholder)
 (defun feebleline-message-buffer-file-name-or-nothing ()
   "Replace echo-area message with mode-line proxy."
   (when buffer-file-name
-    (let ((message-log-max nil))
-      (message (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text "")))))
+    (setq feebleline-placeholder
+          (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
+    (with-current-buffer " *Minibuf-0*"
+      (erase-buffer)
+      (insert feebleline-placeholder)
+      )
+    ))
 
 (defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
