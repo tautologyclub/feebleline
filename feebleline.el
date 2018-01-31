@@ -70,18 +70,29 @@
 (defface feebleline-asterisk-face '((t :foreground "salmon"))
   "Feebleline filename face."
   :group 'feebleline-mode)
+(defface feebleline-previous-buffer-face '((t :foreground "#7e7e7e"))
+  "Feebleline filename face."
+  :group 'feebleline-mode)
+
+(defun previous-buffer-name ()
+  "Get name of previous buffer."
+  (buffer-name (other-buffer (current-buffer) 1))
+  )
+
 
 ;; Note: ugly parentheses, for the simple reason that it makes it easier to
 ;; transpose, add and comment out lines.
 (defvar feebleline-mode-line-text
   '(
-    ("[%s] "    ((format-time-string "%H:%M:%S")) (face feebleline-time-face))
-    ("(%s"      ((string-to-number (format-mode-line "%l"))) (face feebleline-linum-face))
+    ;; ("[%s] "    ((format-time-string "%H:%M:%S")) (face feebleline-time-face))
+    (" %s"      ((string-to-number (format-mode-line "%l"))) (face feebleline-linum-face))
     ("%s"       ("," ) (face default))
-    ("%s) "     ((current-column)) (face feebleline-linum-face))
-    ("%s"       ("") (face default))
-    ("%s"       ((buffer-file-name)) (face feebleline-filename-face))
+    ("%s"     ((current-column)) (face feebleline-linum-face))
+    ("%s"       (" | ") (face default))
+    ("%s"       ((buffer-name)) (face feebleline-filename-face))
     ("%s"       ((if (buffer-modified-p) "*" "" )) (face feebleline-asterisk-face))
+    ("%s"       (" | ") (face default))
+    ("%s"       ((previous-buffer-name)) (face feebleline-previous-buffer-face))
     )
   "Each element is a list with the following format:
 
@@ -126,16 +137,32 @@ sent to `add-text-properties'.")
     text))
 
 (defvar feebleline-placeholder)
+;; (defun feebleline-message-buffer-file-name-or-nothing ()
+;;   "Replace echo-area message with mode-line proxy."
+;;   (when buffer-file-name
+;;     (setq feebleline-placeholder
+;;           (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
+;;     (with-current-buffer " *Minibuf-0*"
+;;       (erase-buffer)
+;;       (insert feebleline-placeholder)
+;;       )
+;;     ))
+
 (defun feebleline-message-buffer-file-name-or-nothing ()
   "Replace echo-area message with mode-line proxy."
-  (when buffer-file-name
-    (setq feebleline-placeholder
-          (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
-    (with-current-buffer " *Minibuf-0*"
-      (erase-buffer)
-      (insert feebleline-placeholder)
+  (if (buffer-name)
+      (progn (setq feebleline-placeholder
+                   (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
+             (with-current-buffer " *Minibuf-0*"
+               (erase-buffer)
+               (insert feebleline-placeholder)))
+    (unless (current-message)
+      (with-current-buffer " *Minibuf-0*"
+        (erase-buffer)
+        )
       )
-    ))
+    )
+  )
 
 (defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
