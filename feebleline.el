@@ -132,7 +132,7 @@ sent to `add-text-properties'.")
     text))
 
 (defvar feebleline-placeholder)
-(defun feebleline-message-buffer-file-name-or-nothing ()
+(defun feebleline-write-buffer-name-maybe ()
   "Replace echo-area message with mode-line proxy."
   (progn (setq feebleline-placeholder
                (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
@@ -144,13 +144,13 @@ sent to `add-text-properties'.")
 (defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
   (unless (current-message)
-    (feebleline-message-buffer-file-name-or-nothing)))
+    (feebleline-write-buffer-name-maybe)))
 
 (defadvice handle-switch-frame (after switch-frame-message-name)
   "Get the modeline proxy to work with i3 switch focus."
-  (feebleline-message-buffer-file-name-or-nothing)
+  (feebleline-write-buffer-name-maybe)
   ad-do-it
-  (feebleline-message-buffer-file-name-or-nothing))
+  (feebleline-write-buffer-name-maybe))
 
 (provide 'feebleline)
 ;;; feebleline.el ends here
