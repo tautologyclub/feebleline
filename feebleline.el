@@ -64,7 +64,7 @@
 (defface feebleline-linum-face '((t :inherit 'default))
   "Feebleline linum face."
   :group 'feebleline-mode)
-(defface feebleline-filename-face '((t :foreground "#fce94e"))
+(defface feebleline-bufname-face '((t :inherit 'font-lock-function-name-face))
   "Feebleline filename face."
   :group 'feebleline-mode)
 (defface feebleline-asterisk-face '((t :foreground "salmon"))
@@ -74,28 +74,14 @@
   "Feebleline filename face."
   :group 'feebleline-mode)
 
-(defun previous-buffer-name ()
+(defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
   (buffer-name (other-buffer (current-buffer) 1))
   )
 
-
 ;; Note: ugly parentheses, for the simple reason that it makes it easier to
 ;; transpose, add and comment out lines.
 (defvar feebleline-mode-line-text
-  '(
-    ;; ("[%s] "    ((format-time-string "%H:%M:%S")) (face feebleline-time-face))
-    (" %s"      ((string-to-number (format-mode-line "%l"))) (face feebleline-linum-face))
-    ("%s"       ("," ) (face default))
-    ("%s"       ((current-column)) (face feebleline-linum-face))
-    ("%s"       (" : ") (face default))
-    ("%s"       ((if (buffer-file-name)
-                     (buffer-file-name)
-                   (buffer-name))) (face font-lock-function-name-face))
-    ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
-    ;; ("%s"       (" | ") (face default))
-    (" | %s"    ((previous-buffer-name)) (face feebleline-previous-buffer-face))
-    )
   "Each element is a list with the following format:
 
     (FORMAT-STRING FORMAT-ARGS PROPS)
@@ -104,6 +90,13 @@ FORMAT-STRING will be used as the first argument to `format', and
 FORMAT-ARGS (a list) will be expanded as the rest of `format'
 arguments.  If PROPS is given, it should be a list which will be
 sent to `add-text-properties'.")
+  '(
+    ("%7s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
+    (" : %s"    ((if (buffer-file-name) (buffer-file-name)
+                   (buffer-name))) (face feebleline-bufname-face))
+    ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
+    (" | %s"    ((feebleline-previous-buffer-name)) (face feebleline-previous-buffer-face))
+    )
 
 (defun feebleline-default-settings ()
   "Some default settings that works well with feebleline."
@@ -119,7 +112,7 @@ sent to `add-text-properties'.")
   (if feebleline-mode
       (progn
         (setq feebleline/mode-line-format-default mode-line-format)
-        (setq feebleline/timer (run-with-timer 0 1 'feebleline-mode-line-proxy-fn))
+        (setq feebleline/timer (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
         (custom-set-variables '(mode-line-format nil))
         (ad-activate 'handle-switch-frame)
         (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
@@ -139,26 +132,13 @@ sent to `add-text-properties'.")
     text))
 
 (defvar feebleline-placeholder)
-;; (defun feebleline-message-buffer-file-name-or-nothing ()
-;;   "Replace echo-area message with mode-line proxy."
-;;   (when buffer-file-name
-;;     (setq feebleline-placeholder
-;;           (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
-;;     (with-current-buffer " *Minibuf-0*"
-;;       (erase-buffer)
-;;       (insert feebleline-placeholder)
-;;       )
-;;     ))
-
 (defun feebleline-message-buffer-file-name-or-nothing ()
   "Replace echo-area message with mode-line proxy."
-  (if (buffer-name)
-      (progn (setq feebleline-placeholder
-                   (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
-             (with-current-buffer " *Minibuf-0*"
-               (erase-buffer)
-               (insert feebleline-placeholder)))
-    )
+  (progn (setq feebleline-placeholder
+               (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
+         (with-current-buffer " *Minibuf-0*"
+           (erase-buffer)
+           (insert feebleline-placeholder)))
   )
 
 (defun feebleline-mode-line-proxy-fn ()
