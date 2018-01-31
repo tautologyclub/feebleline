@@ -87,12 +87,14 @@
     ;; ("[%s] "    ((format-time-string "%H:%M:%S")) (face feebleline-time-face))
     (" %s"      ((string-to-number (format-mode-line "%l"))) (face feebleline-linum-face))
     ("%s"       ("," ) (face default))
-    ("%s"     ((current-column)) (face feebleline-linum-face))
-    ("%s"       (" | ") (face default))
-    ("%s"       ((buffer-name)) (face feebleline-filename-face))
-    ("%s"       ((if (buffer-modified-p) "*" "" )) (face feebleline-asterisk-face))
-    ("%s"       (" | ") (face default))
-    ("%s"       ((previous-buffer-name)) (face feebleline-previous-buffer-face))
+    ("%s"       ((current-column)) (face feebleline-linum-face))
+    ("%s"       (" : ") (face default))
+    ("%s"       ((if (buffer-file-name)
+                     (buffer-file-name)
+                   (buffer-name))) (face font-lock-function-name-face))
+    ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
+    ;; ("%s"       (" | ") (face default))
+    (" | %s"    ((previous-buffer-name)) (face feebleline-previous-buffer-face))
     )
   "Each element is a list with the following format:
 
@@ -156,11 +158,6 @@ sent to `add-text-properties'.")
              (with-current-buffer " *Minibuf-0*"
                (erase-buffer)
                (insert feebleline-placeholder)))
-    (unless (current-message)
-      (with-current-buffer " *Minibuf-0*"
-        (erase-buffer)
-        )
-      )
     )
   )
 
