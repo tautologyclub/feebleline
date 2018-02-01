@@ -5,7 +5,7 @@
 ;; Author: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; Maintainer: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; URL: https://github.com/tautologyclub/feebleline
-;; Package-Version:
+;; Package-Version: 1.0
 ;; Version: 1.0
 
 ;; This file is not part of GNU Emacs.
@@ -55,65 +55,83 @@
 ;;; Code:
 
 (require 'advice)
-(defvar feebleline/mode-line-format-default)
-(defvar feebleline/timer)
 
-(defface feebleline-time-face '((t :inherit 'default :foreground "#73d217"))
+(defvar feebleline-use-legacy-settings nil)
+(when (< emacs-major-version 25)
+  (setq feebleline-use-legacy-settings t))
+
+(setq feebleline-use-legacy-settings nil)
+
+(defface feebleline-time-face '((t :inherit 'font-lock-comment-face))
   "Feebleline timestamp face."
-  :group 'feebleline-mode)
+  :group 'feebleline)
 (defface feebleline-linum-face '((t :inherit 'default))
   "Feebleline linum face."
-  :group 'feebleline-mode)
+  :group 'feebleline)
 (defface feebleline-bufname-face '((t :inherit 'font-lock-function-name-face))
   "Feebleline filename face."
-  :group 'feebleline-mode)
+  :group 'feebleline)
 (defface feebleline-asterisk-face '((t :foreground "salmon"))
   "Feebleline filename face."
-  :group 'feebleline-mode)
+  :group 'feebleline)
 (defface feebleline-previous-buffer-face '((t :foreground "#7e7e7e"))
   "Feebleline filename face."
-  :group 'feebleline-mode)
+  :group 'feebleline)
 
 (defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
-  (buffer-name (other-buffer (current-buffer) 1))
-  )
+  (buffer-name (other-buffer (current-buffer) 1)))
 
-;; Note: ugly parentheses, for the simple reason that it makes it easier to
-;; transpose, add and comment out lines.
 (defvar feebleline-mode-line-text)
 (setq feebleline-mode-line-text
-      '(
-        ("%7s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
+      '(("%6s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
         (" : %s"    ((if (buffer-file-name) (buffer-file-name)
                        (buffer-name))) (face feebleline-bufname-face))
-        ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
-        (" | %s"    ((feebleline-previous-buffer-name)) (face feebleline-previous-buffer-face))
-        ))
+        ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" ))
+         (face feebleline-asterisk-face))
+        (" | %s"    ((feebleline-previous-buffer-name))
+         (face feebleline-previous-buffer-face))))
 
-(defun feebleline-default-settings ()
+(defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
   (custom-set-variables
    '(window-divider-default-bottom-width 1)
    '(window-divider-default-places (quote bottom-only)))
   (window-divider-mode t)
-  (feebleline-mode t))
+  (custom-set-variables '(mode-line-format nil))
+    )
 
+(defvar feebleline-previous-modeline-height)
+(defun feebleline-legacy-settings-on ()
+  "Some default settings for EMACS < 25."
+  (custom-set-faces '(mode-line ((t (:height 0.1))))))
+
+(defvar feebleline/timer)
+(defvar feebleline/mode-line-format-previous)
 (define-minor-mode feebleline-mode
   "Replace modeline with a slimmer proxy."
+  :require 'feebleline
   :global t
   (if feebleline-mode
+      ;; Activation:
       (progn
-        (setq feebleline/mode-line-format-default mode-line-format)
-        (setq feebleline/timer (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
-        (custom-set-variables '(mode-line-format nil))
+        (setq feebleline/mode-line-format-previous mode-line-format)
+        (setq feebleline/timer
+              (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
+        (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
+          (feebleline-default-settings-on))
         (ad-activate 'handle-switch-frame)
         (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
+
+    ;; Deactivation:
+    (custom-set-faces '(mode-line ((t :height unspecified))))
     (custom-set-variables
-     '(mode-line-format feebleline/mode-line-format-default))
+     '(mode-line-format feebleline/mode-line-format-previous))
     (cancel-timer feebleline/timer)
     (ad-deactivate 'handle-switch-frame)
-    (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)))
+    (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
+    (with-current-buffer " *Minibuf-0*"
+      (erase-buffer))))
 
 (defun feebleline--mode-line-part (part)
   "Return a PART (an element) of `feebleline-mode-line-text` as a propertized string."
@@ -127,12 +145,11 @@
 (defvar feebleline-placeholder)
 (defun feebleline-write-buffer-name-maybe ()
   "Replace echo-area message with mode-line proxy."
-  (progn (setq feebleline-placeholder
-               (mapconcat #'feebleline--mode-line-part feebleline-mode-line-text ""))
+  (progn (setq feebleline-placeholder (mapconcat #'feebleline--mode-line-part
+                                                 feebleline-mode-line-text ""))
          (with-current-buffer " *Minibuf-0*"
            (erase-buffer)
-           (insert feebleline-placeholder)))
-  )
+           (insert feebleline-placeholder))))
 
 (defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
