@@ -81,22 +81,15 @@
 
 ;; Note: ugly parentheses, for the simple reason that it makes it easier to
 ;; transpose, add and comment out lines.
-(defvar feebleline-mode-line-text
-  "Each element is a list with the following format:
-
-    (FORMAT-STRING FORMAT-ARGS PROPS)
-
-FORMAT-STRING will be used as the first argument to `format', and
-FORMAT-ARGS (a list) will be expanded as the rest of `format'
-arguments.  If PROPS is given, it should be a list which will be
-sent to `add-text-properties'.")
-  '(
-    ("%7s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
-    (" : %s"    ((if (buffer-file-name) (buffer-file-name)
-                   (buffer-name))) (face feebleline-bufname-face))
-    ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
-    (" | %s"    ((feebleline-previous-buffer-name)) (face feebleline-previous-buffer-face))
-    )
+(defvar feebleline-mode-line-text)
+(setq feebleline-mode-line-text
+      '(
+        ("%7s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
+        (" : %s"    ((if (buffer-file-name) (buffer-file-name)
+                       (buffer-name))) (face feebleline-bufname-face))
+        ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" )) (face feebleline-asterisk-face))
+        (" | %s"    ((feebleline-previous-buffer-name)) (face feebleline-previous-buffer-face))
+        ))
 
 (defun feebleline-default-settings ()
   "Some default settings that works well with feebleline."
