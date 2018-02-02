@@ -72,19 +72,34 @@
   "Feebleline filename face."
   :group 'feebleline)
 (defface feebleline-asterisk-face '((t :foreground "salmon"))
-  "Feebleline filename face."
+  "Feebleline file modified asterisk face."
   :group 'feebleline)
 (defface feebleline-previous-buffer-face '((t :foreground "#7e7e7e"))
   "Feebleline filename face."
+  :group 'feebleline)
+(defcustom feebleline-show-time nil
+  "Set this if you want to show the time in the modeline proxy."
   :group 'feebleline)
 
 (defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
   (buffer-name (other-buffer (current-buffer) 1)))
 
-(defvar feebleline-mode-line-text)
+(defvar feebleline-mode-line-text nil
+  "Each element is a list with the following format:
+
+    (FORMAT-STRING FORMAT-ARGS PROPS)
+
+FORMAT-STRING will be used as the first argument to `format', and
+FORMAT-ARGS (a list) will be expanded as the rest of `format'
+arguments.  If PROPS is given, it should be a list which will be
+sent to `add-text-properties'.")
+
 (setq feebleline-mode-line-text
-      '(("%6s"      ((format "%s,%s" (format-mode-line "%l") (current-column))))
+      '(
+        ("%s"       ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") "")) (face feebleline-time-face))
+        ("%6s"      ((format "%s,%s" (format-mode-line "%l") (current-column)))
+         (face feebleline-linum-face))
         (" : %s"    ((if (buffer-file-name) (buffer-file-name)
                        (buffer-name))) (face feebleline-bufname-face))
         ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" ))
@@ -98,10 +113,8 @@
    '(window-divider-default-bottom-width 1)
    '(window-divider-default-places (quote bottom-only)))
   (window-divider-mode t)
-  (custom-set-variables '(mode-line-format nil))
-    )
+  (custom-set-variables '(mode-line-format nil)))
 
-(defvar feebleline-previous-modeline-height)
 (defun feebleline-legacy-settings-on ()
   "Some default settings for EMACS < 25."
   (custom-set-faces '(mode-line ((t (:height 0.1))))))
