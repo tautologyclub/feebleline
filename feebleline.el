@@ -121,6 +121,8 @@ sent to `add-text-properties'.")
 
 (defvar feebleline/timer)
 (defvar feebleline/mode-line-format-previous)
+
+;;;###autoload
 (define-minor-mode feebleline-mode
   "Replace modeline with a slimmer proxy."
   :require 'feebleline
