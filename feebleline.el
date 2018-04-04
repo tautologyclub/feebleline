@@ -109,7 +109,7 @@ sent to `add-text-properties'.")
         (" %s" ((if (buffer-file-name)
                      (replace-regexp-in-string feebleline--home-dir "~"
                       (file-name-directory (buffer-file-name)))
-                   (buffer-name)))
+                   ""))
          (face feebleline-dir-face))
         ("%s" ((if (buffer-file-name)
                    (file-name-nondirectory
