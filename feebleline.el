@@ -77,6 +77,9 @@
 (defface feebleline-previous-buffer-face '((t :foreground "#7e7e7e"))
   "Feebleline filename face."
   :group 'feebleline)
+(defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
+  "Feebleline filename face."
+  :group 'feebleline)
 (defcustom feebleline-show-time nil
   "Set this if you want to show the time in the modeline proxy."
   :group 'feebleline)
@@ -95,17 +98,29 @@ FORMAT-ARGS (a list) will be expanded as the rest of `format'
 arguments.  If PROPS is given, it should be a list which will be
 sent to `add-text-properties'.")
 
+(defvar feebleline--home-dir nil)
+
 (setq feebleline-mode-line-text
       '(
-        ("%s"       ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") "")) (face feebleline-time-face))
-        ("%6s"      ((format "%s,%s" (format-mode-line "%l") (current-column)))
+        ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
+         (face feebleline-time-face))
+        ("%6s" ((format "%s:%s" (format-mode-line "%l") (current-column)))
          (face feebleline-linum-face))
-        (" : %s"    ((if (buffer-file-name) (buffer-file-name)
-                       (buffer-name))) (face feebleline-bufname-face))
-        ("%s"       ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" ))
+        (" %s" ((if (buffer-file-name)
+                     (replace-regexp-in-string feebleline--home-dir "~"
+                      (file-name-directory (buffer-file-name)))
+                   (buffer-name)))
+         (face feebleline-dir-face))
+        ("%s" ((if (buffer-file-name)
+                   (file-name-nondirectory
+                    (buffer-file-name))
+                 (buffer-name)))
+         (face feebleline-bufname-face))
+        ("%s" ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" ))
          (face feebleline-asterisk-face))
-        (" | %s"    ((feebleline-previous-buffer-name))
-         (face feebleline-previous-buffer-face))))
+        (" | %s" ((feebleline-previous-buffer-name))
+         (face feebleline-previous-buffer-face))
+        ))
 
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
@@ -130,9 +145,10 @@ sent to `add-text-properties'.")
   (if feebleline-mode
       ;; Activation:
       (progn
+        (setq feebleline--home-dir (expand-file-name "~"))
         (setq feebleline/mode-line-format-previous mode-line-format)
         (setq feebleline/timer
-              (run-with-timer 0 0.1 'feebleline-mode-line-proxy-fn))
+              (run-with-timer 0 0.5 'feebleline-mode-line-proxy-fn))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
         (ad-activate 'handle-switch-frame)
