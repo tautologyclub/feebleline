@@ -80,7 +80,7 @@
 (defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
   "Feebleline filename face."
   :group 'feebleline)
-(defface feebleline-git-branch-face '((t :inherit 'font-lock-variable-name-face :bold nil :italic t))
+(defface feebleline-git-branch-face '((t :inherit 'font-lock-comment-face :bold nil :italic t))
   "Feebleline filename face."
   :group 'feebleline)
 
