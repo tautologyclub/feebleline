@@ -80,8 +80,22 @@
 (defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
   "Feebleline filename face."
   :group 'feebleline)
+(defface feebleline-git-branch-face '((t :inherit 'font-lock-variable-name-face :bold nil :italic t))
+  "Feebleline filename face."
+  :group 'feebleline)
+
+;; Customizations
 (defcustom feebleline-show-time nil
   "Set this if you want to show the time in the modeline proxy."
+  :group 'feebleline)
+(defcustom feebleline-show-git-branch nil
+  "Set this if you want to show the git branch in the modeline proxy."
+  :group 'feebleline)
+(defcustom feebleline-show-previous-buffer nil
+  "Set this if you want to show the previous 'buffer-name' in the modeline proxy."
+  :group 'feebleline)
+(defcustom feebleline-show-directory t
+  "Set this if you want to show the direcory path as well as the file-name in the modeline proxy."
   :group 'feebleline)
 
 (defun feebleline-previous-buffer-name ()
@@ -98,29 +112,46 @@ FORMAT-ARGS (a list) will be expanded as the rest of `format'
 arguments.  If PROPS is given, it should be a list which will be
 sent to `add-text-properties'.")
 
+(defun feebleline--git-branch-string ()
+  "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
+  (interactive)
+  (when (and (eshell-search-path "git")
+             (locate-dominating-file default-directory ".git"))
+    (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
+      (if (> (length git-output) 0)
+          (substring git-output 0 -1)
+          ;; (concat " :" (substring git-output 0 -1))
+        "(no branch)"))))
+
 (defvar feebleline--home-dir nil)
 
-(setq feebleline-mode-line-text
-      '(
-        ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
-         (face feebleline-time-face))
-        ("%6s" ((format "%s:%s" (format-mode-line "%l") (current-column)))
-         (face feebleline-linum-face))
-        (" %s" ((if (buffer-file-name)
-                     (replace-regexp-in-string feebleline--home-dir "~"
-                      (file-name-directory (buffer-file-name)))
-                   ""))
-         (face feebleline-dir-face))
-        ("%s" ((if (buffer-file-name)
-                   (file-name-nondirectory
-                    (buffer-file-name))
-                 (buffer-name)))
-         (face feebleline-bufname-face))
-        ("%s" ((if (and (buffer-file-name) (buffer-modified-p)) "*" "" ))
-         (face feebleline-asterisk-face))
-        (" | %s" ((feebleline-previous-buffer-name))
-         (face feebleline-previous-buffer-face))
-        ))
+(setq
+ feebleline-mode-line-text
+ '(
+   ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
+    (face feebleline-time-face))
+   ("%6s" ((format "%s:%s" (format-mode-line "%l") (current-column)))
+    (face feebleline-linum-face))
+   (" %s" ((if (and feebleline-show-directory (buffer-file-name))
+               (replace-regexp-in-string
+                feebleline--home-dir "~"
+                (file-name-directory (buffer-file-name)))
+             ""))
+    (face feebleline-dir-face))
+   ("%s" ((if (buffer-file-name) (file-name-nondirectory (buffer-file-name))
+            (buffer-name)))
+    (face feebleline-bufname-face))
+   ("%s" ((if (and (buffer-file-name) (buffer-modified-p)) "*"
+            "" ))
+    (face feebleline-asterisk-face))
+   ("%s" ((if feebleline-show-git-branch (concat " : " (feebleline--git-branch-string))
+            ""))
+    (face feebleline-git-branch-face))
+   ("%s" ((if feebleline-show-previous-buffer (concat " | " (feebleline-previous-buffer-name))
+            ""))
+   (face feebleline-previous-buffer-face)))
+ )
+
 
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
