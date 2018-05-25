@@ -34,7 +34,14 @@ to see what you can do. An example init snippet would look something like:
       :config       (feebleline-mode 1))
 
 ## Screenshots
-These screenshots are a bit out of date. I promise to update them shortly.
+This is a screenshow from the latest version (yes that is my
+actual ugly day-to-day theme):
+
+![ScreenShot](scrot_v1_1.png)
+
+### Outdated scrots
+
+(but on less ugly theme :P)
 
 ![ScreenShot](scrot2.png)
 
