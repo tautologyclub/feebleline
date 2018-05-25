@@ -115,6 +115,7 @@ sent to `add-text-properties'.")
 (defun feebleline--git-branch-string ()
   "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
   (interactive)
+  (require 'esh-ext)
   (when (and (eshell-search-path "git")
              (locate-dominating-file default-directory ".git"))
     (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
