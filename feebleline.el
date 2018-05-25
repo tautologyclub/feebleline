@@ -5,8 +5,8 @@
 ;; Author: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; Maintainer: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; URL: https://github.com/tautologyclub/feebleline
-;; Package-Version: 1.0
-;; Version: 1.0
+;; Package-Version: 1.1
+;; Version: 1.1
 
 ;; This file is not part of GNU Emacs.
 
