@@ -159,7 +159,8 @@ sent to `add-text-properties'.")
   (setq window-divider-default-bottom-width 1
         window-divider-default-places (quote bottom-only))
   (window-divider-mode t)
-  (setq-default mode-line-format nil))
+  (setq-default mode-line-format nil)
+  (setq mode-line-format nil))
 
 (defun feebleline-legacy-settings-on ()
   "Some default settings for EMACS < 25."
@@ -186,8 +187,9 @@ sent to `add-text-properties'.")
         (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
 
     ;; Deactivation:
-    (set-face-attribute 'mode-line nil :height nil)
-    (setq-default 'mode-line-format feebleline/mode-line-format-previous)
+    (set-face-attribute 'mode-line nil :height 1.0)
+    (setq-default mode-line-format feebleline/mode-line-format-previous)
+    (setq mode-line-format feebleline/mode-line-format-previous)
     (cancel-timer feebleline/timer)
     (ad-deactivate 'handle-switch-frame)
     (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
