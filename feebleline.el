@@ -199,6 +199,8 @@ sent to `add-text-properties'.")
     (cancel-timer feebleline/timer)
     ;; (ad-deactivate 'handle-switch-frame)
     (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
+    (force-mode-line-update)
+    (redraw-display)
     (with-current-buffer " *Minibuf-0*"
       (erase-buffer))))
 
