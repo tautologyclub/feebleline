@@ -97,6 +97,9 @@
 (defcustom feebleline-show-directory t
   "Set this if you want to show the direcory path as well as the file-name in the modeline proxy."
   :group 'feebleline)
+(defcustom feebleline-show-linenum t
+  "Set this if you want to show line number and column number in the modeline proxy."
+  :group 'feebleline)
 
 (defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
@@ -131,7 +134,10 @@ sent to `add-text-properties'.")
  '(
    ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
     (face feebleline-time-face))
-   ("%6s" ((format "%s:%s" (format-mode-line "%l") (current-column)))
+   ("%s"
+    ((if feebleline-show-linenum
+         (format "%5s:%-2s" (format-mode-line "%l") (current-column))
+       ""))
     (face feebleline-linum-face))
    (" %s" ((if (and feebleline-show-directory (buffer-file-name))
                (replace-regexp-in-string
