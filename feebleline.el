@@ -115,17 +115,28 @@ FORMAT-ARGS (a list) will be expanded as the rest of `format'
 arguments.  If PROPS is given, it should be a list which will be
 sent to `add-text-properties'.")
 
-(defun feebleline--git-branch-string ()
-  "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
-  (interactive)
+(require 'magit nil t)
+(if (fboundp 'magit-get-current-branch)
+    (defun feebleline--git-branch-string ()
+      "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
+      (interactive)
+      (require 'esh-ext)
+      (let ((git-output (magit-get-current-branch)))
+        (if (> (length git-output) 0)
+            git-output
+          "(no branch)")))
+
+  (message "Warning: Feebleline couldn't find magit! Using hacky version to obtain git branch.")
   (require 'esh-ext)
-  (when (and (eshell-search-path "git")
-             (locate-dominating-file default-directory ".git"))
-    (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
-      (if (> (length git-output) 0)
-          (substring git-output 0 -1)
-          ;; (concat " :" (substring git-output 0 -1))
-        "(no branch)"))))
+  (defun feebleline--git-branch-string ()
+    "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
+    (interactive)
+    (when (and (eshell-search-path "git")
+               (locate-dominating-file default-directory ".git"))
+      (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
+        (if (> (length git-output) 0)
+            (substring git-output 0 -1)
+          "(no branch)")))))
 
 (defvar feebleline--home-dir nil)
 
