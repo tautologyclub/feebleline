@@ -1,3 +1,4 @@
+
 ;;; feebleline.el --- Replace modeline with a slimmer proxy
 
 ;; Copyright 2018 Benjamin Lindqvist
@@ -5,8 +6,8 @@
 ;; Author: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; Maintainer: Benjamin Lindqvist <benjamin.lindqvist@gmail.com>
 ;; URL: https://github.com/tautologyclub/feebleline
-;; Package-Version: 1.1
-;; Version: 1.1
+;; Package-Version: 2.0
+;; Version: 2.0
 
 ;; This file is not part of GNU Emacs.
 
@@ -33,143 +34,126 @@
 ;; for anything else (but if you switch frame/window, it will replace whatever
 ;; message is currently displayed).
 
-;; To customize feebleline's format, modify `feebleline-mode-line-text'.
+;; Feebleline now has a much improved customization interface. Simply set
+;; feebleline-msg-functions to whatever you want! Example:
 
-;; NOTE:
-;; feebleline.el will look considerably better with the following
-;; settings:
+;; (setq
+;;  feebleline-msg-functions
+;;  '((feebleline-line-number)
+;;    (feebleline-column-number)
+;;    (feebleline-file-directory)
+;;    (feebleline-file-or-buffer-name)
+;;    (feebleline-file-modified-star)
+;;    (magit-get-current-branch)
+;;    (projectile-project-name)))
 
-;;   (window-divider-mode t)
-;;   (setq window-divider-default-bottom-width 1)
-;;   (setq window-divider-default-places (quote bottom-only))
+;; The elements should be functions, accepting no arguments, returning either
+;; nil or a valid string. Even lambda functions work (but don't forget to quote
+;; them). Optionally, you can include an alist after each function, like so:
 
-;; But this mode does not work for all EMACS versions and may not work with
-;; terminal EMACS (but I haven't checked).  If you're on GUI EMACS and your
-;; version supports it, just place the following in your init file:
+;; (feebleline-line-number ((post . "") (fmt . "%5s")))
 
-;;   (feebleline-default-settings)
-
-;; Otherwise, do (feebleline-mode t) instead, but be warned that I'm not sure
-;; if it will look good.
+;; Accepted keys are pre, post, face, fmt and right-align (last one is
+;; experimental). See source code for inspiration.
 
 ;;; Code:
 
-(require 'advice)
+(defcustom feebleline-msg-functions nil
+  "Fixme -- document me."
+  :type  'list
+  :group 'feebleline)
 
-(defvar feebleline-use-legacy-settings nil)
-(when (< emacs-major-version 25)
-  (setq feebleline-use-legacy-settings t))
+(defcustom feebleline-timer-interval 0.1
+  "Refresh interval of feebleline mode-line proxy."
+  :type  'float
+  :group 'feebleline)
 
-(setq feebleline-use-legacy-settings nil)
+(defcustom feebleline-use-legacy-settings nil
+  "Hacky settings only applicable to releases older than 25."
+  :type  'boolean
+  :group 'feebleline
+  )
 
-(defface feebleline-time-face '((t :inherit 'font-lock-comment-face))
-  "Feebleline timestamp face."
+(defvar feebleline--home-dir nil)
+(defvar feebleline--msg-timer)
+(defvar feebleline/mode-line-format-previous)
+
+(defface feebleline-git-branch-face '((t :foreground "#444444" :italic t))
+  "Example face for git branch."
   :group 'feebleline)
-(defface feebleline-linum-face '((t :inherit 'default))
-  "Feebleline linum face."
-  :group 'feebleline)
-(defface feebleline-bufname-face '((t :inherit 'font-lock-function-name-face))
-  "Feebleline filename face."
-  :group 'feebleline)
-(defface feebleline-asterisk-face '((t :foreground "salmon"))
-  "Feebleline file modified asterisk face."
-  :group 'feebleline)
-(defface feebleline-previous-buffer-face '((t :foreground "#7e7e7e"))
-  "Feebleline filename face."
-  :group 'feebleline)
+
 (defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
-  "Feebleline filename face."
-  :group 'feebleline)
-(defface feebleline-git-branch-face '((t :inherit 'font-lock-comment-face :bold nil :italic t))
-  "Feebleline filename face."
+  "Example face for dir face."
   :group 'feebleline)
 
-;; Customizations
-(defcustom feebleline-show-time nil
-  "Set this if you want to show the time in the modeline proxy."
-  :group 'feebleline)
-(defcustom feebleline-show-git-branch nil
-  "Set this if you want to show the git branch in the modeline proxy."
-  :group 'feebleline)
-(defcustom feebleline-show-previous-buffer nil
-  "Set this if you want to show the previous 'buffer-name' in the modeline proxy."
-  :group 'feebleline)
-(defcustom feebleline-show-directory t
-  "Set this if you want to show the direcory path as well as the file-name in the modeline proxy."
-  :group 'feebleline)
-(defcustom feebleline-show-linenum t
-  "Set this if you want to show line number and column number in the modeline proxy."
-  :group 'feebleline)
+(defun feebleline-linecol-string ()
+  "Hey guy!"
+  (format "%4s:%-2s" (format-mode-line "%l") (current-column)))
 
 (defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
   (buffer-name (other-buffer (current-buffer) 1)))
 
-(defvar feebleline-mode-line-text nil
-  "Each element is a list with the following format:
+(defun feebleline-line-number ()
+  "Line number as string."
+  (if (buffer-file-name)
+      (format "%s" (line-number-at-pos))))
 
-    (FORMAT-STRING FORMAT-ARGS PROPS)
+(defun feebleline-column-number ()
+  "Column number as string."
+  (if (buffer-file-name)
+      (format "%s" (current-column))))
 
-FORMAT-STRING will be used as the first argument to `format', and
-FORMAT-ARGS (a list) will be expanded as the rest of `format'
-arguments.  If PROPS is given, it should be a list which will be
-sent to `add-text-properties'.")
+(defun feebleline-file-directory ()
+  "Current directory, if buffer is displaying a file."
+  (if (buffer-file-name)
+      (replace-regexp-in-string
+       (concat "^" feebleline--home-dir) "~"
+       default-directory)
+    ""))
 
-(require 'magit nil t)
-(if (fboundp 'magit-get-current-branch)
-    (defun feebleline--git-branch-string ()
-      "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
-      (interactive)
-      (require 'esh-ext)
-      (let ((git-output (magit-get-current-branch)))
-        (if (> (length git-output) 0)
-            git-output
-          "(no branch)")))
+(defun feebleline-file-or-buffer-name ()
+  "Current file, or just buffer name if not a file."
+  (if (buffer-file-name)
+      (file-name-nondirectory (buffer-file-name))
+    (buffer-name)))
 
-  (message "Warning: Feebleline couldn't find magit! Using hacky version to obtain git branch.")
-  (require 'esh-ext)
-  (defun feebleline--git-branch-string ()
-    "Return current git branch as a string, or the empty string if pwd is not in a git repo (or the git command is not found)."
-    (interactive)
-    (when (and (eshell-search-path "git")
-               (locate-dominating-file default-directory ".git"))
-      (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
-        (if (> (length git-output) 0)
-            (substring git-output 0 -1)
-          "(no branch)")))))
+(defun feebleline-file-modified-star ()
+  "Display star if buffer file was modified."
+  (when (and (buffer-file-name) (buffer-modified-p)) "*"))
 
-(defvar feebleline--home-dir nil)
+(defun feebleline-project-name ()
+  "Return projectile project name if exists, otherwise nil."
+  (unless (string-equal "-" (projectile-project-name))
+    (projectile-project-name)))
 
+;; -- TODO:
+;; right-align property doesn't work with post/pre and it also messes up other
+;; frames that don't have the same font size. Furthermore it has to be the last
+;; element of the list and no more than one element can have the property.
+;; Shortly, it's shite.
 (setq
- feebleline-mode-line-text
- '(
-   ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
-    (face feebleline-time-face))
-   ("%s"
-    ((if feebleline-show-linenum
-         (format "%5s:%-2s" (format-mode-line "%l") (current-column))
-       ""))
-    (face feebleline-linum-face))
-   (" %s" ((if (and feebleline-show-directory (buffer-file-name))
-               (replace-regexp-in-string
-                feebleline--home-dir "~"
-                (file-name-directory (buffer-file-name)))
-             ""))
-    (face feebleline-dir-face))
-   ("%s" ((if (buffer-file-name) (file-name-nondirectory (buffer-file-name))
-            (buffer-name)))
-    (face feebleline-bufname-face))
-   ("%s" ((if (and (buffer-file-name) (buffer-modified-p)) "*"
-            "" ))
-    (face feebleline-asterisk-face))
-   ("%s" ((if feebleline-show-git-branch (concat " : " (feebleline--git-branch-string))
-            ""))
-    (face feebleline-git-branch-face))
-   ("%s" ((if feebleline-show-previous-buffer (concat " | " (feebleline-previous-buffer-name))
-            ""))
-   (face feebleline-previous-buffer-face)))
- )
+ feebleline-msg-functions
+ '((feebleline-line-number         ((post . "") (fmt . "%5s")))
+   (feebleline-column-number       ((pre . ":") (fmt . "%-2s")))
+   (feebleline-file-directory      ((face . feebleline-dir-face)    (post . "")))
+   (feebleline-file-or-buffer-name ((face . font-lock-keyword-face) (post . "")))
+   (feebleline-file-modified-star  ((face . font-lock-warning-face) (post . "")))
+   (magit-get-current-branch       ((face . feebleline-git-branch-face) (pre . " - ")))
+   ;; (feebleline-project-name        ((right-align . t)))
+   ))
 
+(defmacro feebleline-append-msg-function (&rest b)
+  "Macro for adding B to the feebleline mode-line, at the end."
+  `(add-to-list 'feebleline-msg-functions ,@b t (lambda (x y) nil)))
+
+(defmacro feebleline-prepend-msg-function (&rest b)
+  "Macro for adding B to the feebleline mode-line, at the beginning."
+  `(add-to-list 'feebleline-msg-functions ,@b nil (lambda (x y) nil)))
+
+;; (feebleline-append-msg-function '((lambda () "end") ((pre . "/"))))
+;; (feebleline-append-msg-function '(magit-get-current-branch ((pre . "/"))))
+;; (feebleline-prepend-msg-function '((lambda () "-") ((post . "/"))))
 
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
@@ -183,8 +167,46 @@ sent to `add-text-properties'.")
   "Some default settings for EMACS < 25."
   (set-face-attribute 'mode-line nil :height 0.1))
 
-(defvar feebleline/timer)
-(defvar feebleline/mode-line-format-previous)
+(defun feebleline--insert ()
+  "Insert stuff into the mini buffer."
+  (unless (current-message)
+    (let ((tmp-string ""))
+      (dolist (idx feebleline-msg-functions)
+        (let ((string-func (car idx))
+              (props (cadr  idx)))
+          (let ((msg (apply string-func nil))
+                (string-face (cdr (assoc 'face props)))
+                (pre (cdr (assoc 'pre props)))
+                (post (cdr (assoc 'post props)))
+                (fmt (cdr (assoc 'fmt props)))
+                (right-align (cdr (assoc 'right-align props)))
+                )
+            (when msg
+              (unless string-face (setq string-face 'default))
+              (unless post (setq post " "))
+              (unless fmt (setq fmt "%s"))
+              (when right-align
+                (setq fmt
+                 (concat "%"
+                         (format "%s" (- (window-width) (length tmp-string) 1))
+                                  "s"))
+                ;; (message "%s" fmt)
+                )
+              (setq tmp-string
+                    (concat
+                     tmp-string
+                     (propertize
+                      (concat pre (format fmt msg) post)
+                          'face string-face)))))))
+      (with-current-buffer " *Minibuf-0*"
+        (erase-buffer)
+        (insert tmp-string)))))
+
+(defun feebleline--clear-echo-area ()
+  "Erase echo area."
+  (with-current-buffer " *Minibuf-0*"
+    (erase-buffer))
+  )
 
 ;;;###autoload
 (define-minor-mode feebleline-mode
@@ -196,53 +218,25 @@ sent to `add-text-properties'.")
       (progn
         (setq feebleline--home-dir (expand-file-name "~"))
         (setq feebleline/mode-line-format-previous mode-line-format)
-        (setq feebleline/timer
-              (run-with-timer 0 0.5 'feebleline-mode-line-proxy-fn))
+        (setq feebleline--msg-timer (run-with-timer 0 feebleline-timer-interval 'feebleline--insert))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        ;; (ad-activate 'handle-switch-frame)
-        (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn))
+        (add-hook 'focus-in-hook 'feebleline--insert)
+        )
 
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline/mode-line-format-previous)
     (setq mode-line-format feebleline/mode-line-format-previous)
-    (cancel-timer feebleline/timer)
-    ;; (ad-deactivate 'handle-switch-frame)
-    (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
+    (cancel-timer feebleline--msg-timer)
+    (remove-hook 'focus-in-hook 'feebleline--insert)
     (force-mode-line-update)
     (redraw-display)
-    (with-current-buffer " *Minibuf-0*"
-      (erase-buffer))))
+    (feebleline--clear-echo-area)))
 
-(defun feebleline--mode-line-part (part)
-  "Return a PART (an element) of `feebleline-mode-line-text` as a propertized string."
-  (let ((text (apply #'format (append (list (car part))
-                                      (mapcar #'eval (cadr part)))))
-        (props (elt part 2)))
-    (when props
-      (add-text-properties 0 (length text) props text))
-    text))
 
-(defvar feebleline-placeholder)
-(defun feebleline-write-buffer-name-maybe ()
-  "Replace echo-area message with mode-line proxy."
-  (progn (setq feebleline-placeholder (mapconcat #'feebleline--mode-line-part
-                                                 feebleline-mode-line-text ""))
-         (with-current-buffer " *Minibuf-0*"
-           (erase-buffer)
-           (insert feebleline-placeholder))))
 
-(defun feebleline-mode-line-proxy-fn ()
-  "Put a mode-line proxy in the echo area *if* echo area is empty."
-  (unless (current-message)
-    (feebleline-write-buffer-name-maybe)))
 
-;; (defadvice handle-switch-frame (after switch-frame-message-name)
-;;   "Get the modeline proxy to work with i3 switch focus."
-;;   (feebleline-write-buffer-name-maybe)
-;;   ad-do-it
-;;   (feebleline-write-buffer-name-maybe))
-
+                                        ;
 (provide 'feebleline)
 ;;; feebleline.el ends here
