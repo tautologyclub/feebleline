@@ -16,9 +16,12 @@
   )
 
 (defvar feebleline--home-dir nil)
-(defvar feebleline--new-timer)
+(defvar feebleline--msg-timer)
 (defvar feebleline/mode-line-format-previous)
 
+(defface feebleline-git-branch-face '((t :foreground "#444444" :italic t))
+  "Example face for git branch."
+  :group 'feebleline)
 
 (defun feebleline-linecol-string ()
   "Hey guy!"
@@ -30,11 +33,13 @@
 
 (defun feebleline-line-number ()
   "Line number as string."
-  (format "%s" (line-number-at-pos)))
+  (if (buffer-file-name)
+      (format "%s" (line-number-at-pos))))
 
 (defun feebleline-column-number ()
   "Column number as string."
-  (format "%s" (current-column)))
+  (if (buffer-file-name)
+      (format "%s" (current-column))))
 
 (defun feebleline-file-directory ()
   "Current directory, if buffer is displaying a file."
@@ -52,26 +57,27 @@
 
 (defun feebleline-file-modified-star ()
   "Display star if buffer file was modified."
-  (if (and (buffer-file-name) (buffer-modified-p)) "*" ""))
+  (when (and (buffer-file-name) (buffer-modified-p)) "*"))
 
 (defun feebleline-project-name ()
   "Return projectile project name if exists, otherwise nil."
-  (if (string-equal "-" (projectile-project-name))
-      nil
-    (projectile-project-name))
-  )
+  (unless (string-equal "-" (projectile-project-name))
+    (projectile-project-name)))
 
-;; TODO: Perhaps a right-align property?
+;; -- TODO:
+;; right-align property doesn't work with post/pre and it also messes up other
+;; frames that don't have the same font size. Furthermore it has to be the last
+;; element of the list and no more than one element can have the property.
+;; Shortly, it's shite.
 (setq
  feebleline-msg-functions
- '(
-   (feebleline-line-number         ((post . "") (fmt . "%5s")))
+ '((feebleline-line-number         ((post . "") (fmt . "%5s")))
    (feebleline-column-number       ((pre . ":") (fmt . "%-2s")))
-   (feebleline-file-directory      ((face . feebleline-dir-face) (post . "")))
+   (feebleline-file-directory      ((face . feebleline-dir-face)    (post . "")))
    (feebleline-file-or-buffer-name ((face . font-lock-keyword-face) (post . "")))
    (feebleline-file-modified-star  ((face . font-lock-warning-face) (post . "")))
-   (magit-get-current-branch       ((face . font-lock-comment-face) (pre . ":")))
-   ;; (feebleline-project-name        ((pre . "[") (post . "]")))
+   (magit-get-current-branch       ((face . feebleline-git-branch-face) (pre . " - ")))
+   ;; (feebleline-project-name        ((right-align . t)))
    ))
 
 (defmacro feebleline-append-msg-function (&rest b)
@@ -110,14 +116,19 @@
                 (pre (cdr (assoc 'pre props)))
                 (post (cdr (assoc 'post props)))
                 (fmt (cdr (assoc 'fmt props)))
-                ;; (ral (cdr (assoc 'ral props)))
+                (right-align (cdr (assoc 'right-align props)))
                 )
             (when msg
               (unless string-face (setq string-face 'feebleline-default-face))
               (unless post (setq post " "))
               (unless fmt (setq fmt "%s"))
-              ;; (when ral
-                ;; (setq fmt ))
+              (when right-align
+                (setq fmt
+                 (concat "%"
+                         (format "%s" (- (window-width) (length tmp-string) 1))
+                                  "s"))
+                ;; (message "%s" fmt)
+                )
               (setq tmp-string
                     (concat
                      tmp-string
@@ -144,7 +155,7 @@
       (progn
         (setq feebleline--home-dir (expand-file-name "~"))
         (setq feebleline/mode-line-format-previous mode-line-format)
-        (setq feebleline--new-timer (run-with-timer 0 feebleline-timer-interval 'feebleline--insert))
+        (setq feebleline--msg-timer (run-with-timer 0 feebleline-timer-interval 'feebleline--insert))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
         (add-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
@@ -154,7 +165,7 @@
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline/mode-line-format-previous)
     (setq mode-line-format feebleline/mode-line-format-previous)
-    (cancel-timer feebleline--new-timer)
+    (cancel-timer feebleline--msg-timer)
     (remove-hook 'focus-in-hook 'feebleline-mode-line-proxy-fn)
     (force-mode-line-update)
     (redraw-display)
