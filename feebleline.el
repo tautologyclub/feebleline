@@ -49,9 +49,9 @@
 
 ;; The elements should be functions, accepting no arguments, returning either
 ;; nil or a valid string. Even lambda functions work (but don't forget to quote
-;; them). Optionally, you can include an alist after each function, like so:
+;; them). Optionally, you can include keywords  after each function, like so:
 
-;; (feebleline-line-number ((post . "") (fmt . "%5s")))
+;; (feebleline-line-number :post "" :fmt "%5s")
 
 ;; Accepted keys are pre, post, face, fmt and right-align (last one is
 ;; experimental). See source code for inspiration.
@@ -139,13 +139,13 @@
 ;; Shortly, it's shite.
 (setq
  feebleline-msg-functions
- '((feebleline-line-number         ((post . "") (fmt . "%5s")))
-   (feebleline-column-number       ((pre . ":") (fmt . "%-2s")))
-   (feebleline-file-directory      ((face . feebleline-dir-face)    (post . "")))
-   (feebleline-file-or-buffer-name ((face . font-lock-keyword-face) (post . "")))
-   (feebleline-file-modified-star  ((face . font-lock-warning-face) (post . "")))
-   (feebleline-git-object          ((face . feebleline-git-face) (pre . " - ")))
-   ;; (feebleline-project-name        ((right-align . t)))
+ '((feebleline-line-number         :post "" :fmt "%5s")
+   (feebleline-column-number       :pre ":" :fmt "%-2s")
+   (feebleline-file-directory      :face feebleline-dir-face :post "")
+   (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
+   (feebleline-file-modified-star  :face font-lock-warning-face :post "")
+   (feebleline-git-object          :face feebleline-git-face :pre " - ")
+   ;; (feebleline-project-name        :right-align t)
    ))
 
 (defmacro feebleline-append-msg-function (&rest b)
@@ -172,37 +172,28 @@
   "Some default settings for EMACS < 25."
   (set-face-attribute 'mode-line nil :height 0.1))
 
+(cl-defun feebleline--insert-func (func &key (face 'default) pre (post " ") (fmt "%s") right-align)
+  "Format an element of feebleline-msg-functions based on its properties."
+  (when right-align
+    (setq fmt (concat "%"
+                      (format "%s" (- (window-width) (length tmp-string) 1))
+                      "s")))
+  (let* ((msg (apply func nil))
+         (string (concat pre (format fmt msg) post)))
+    (if msg
+        (if face
+            (propertize string 'face face)
+          string)
+      "")))
+
 (defun feebleline--insert ()
   "Insert stuff into the mini buffer."
   (unless (current-message)
     (let ((tmp-string ""))
       (dolist (idx feebleline-msg-functions)
-        (let ((string-func (car idx))
-              (props (cadr  idx)))
-          (let ((msg (apply string-func nil))
-                (string-face (cdr (assoc 'face props)))
-                (pre (cdr (assoc 'pre props)))
-                (post (cdr (assoc 'post props)))
-                (fmt (cdr (assoc 'fmt props)))
-                (right-align (cdr (assoc 'right-align props)))
-                )
-            (when msg
-              (unless string-face (setq string-face 'default))
-              (unless post (setq post " "))
-              (unless fmt (setq fmt "%s"))
-              (when right-align
-                (setq fmt
-                 (concat "%"
-                         (format "%s" (- (window-width) (length tmp-string) 1))
-                                  "s"))
-                ;; (message "%s" fmt)
-                )
-              (setq tmp-string
-                    (concat
-                     tmp-string
-                     (propertize
-                      (concat pre (format fmt msg) post)
-                          'face string-face)))))))
+        (setq tmp-string
+              (concat tmp-string
+                      (apply 'feebleline--insert-func idx))))
       (with-current-buffer " *Minibuf-0*"
         (erase-buffer)
         (insert tmp-string)))))
