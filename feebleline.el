@@ -100,6 +100,9 @@
 (defcustom feebleline-show-linenum t
   "Set this if you want to show line number and column number in the modeline proxy."
   :group 'feebleline)
+(defcustom feebleline-align "right"
+  "Set the direction of the alignment, default right."
+  :group 'feebleline)
 
 (defun feebleline-previous-buffer-name ()
   "Get name of previous buffer."
@@ -231,7 +234,12 @@ sent to `add-text-properties'.")
                                                  feebleline-mode-line-text ""))
          (with-current-buffer " *Minibuf-0*"
            (erase-buffer)
-           (insert feebleline-placeholder))))
+           (if (string-equal feebleline-align "right")
+               (let ((placeholder-chars-length (length feebleline-placeholder))
+                     (minibuffer-chars-length (window-width))
+                     (padding-chars-length 2))
+                 (insert (format "%s %s" (make-string (- minibuffer-chars-length placeholder-chars-length padding-chars-length) ?\ ) feebleline-placeholder)))
+             (insert feebleline-placeholder)))))
 
 (defun feebleline-mode-line-proxy-fn ()
   "Put a mode-line proxy in the echo area *if* echo area is empty."
