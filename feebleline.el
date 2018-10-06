@@ -88,6 +88,9 @@
 (defcustom feebleline-show-time nil
   "Set this if you want to show the time in the modeline proxy."
   :group 'feebleline)
+(defcustom feebleline-format-time-string "[%H:%M:%S] "
+  "The string to control time format."
+  :group 'feebleline)
 (defcustom feebleline-show-git-branch nil
   "Set this if you want to show the git branch in the modeline proxy."
   :group 'feebleline)
@@ -143,7 +146,7 @@ sent to `add-text-properties'.")
 (setq
  feebleline-mode-line-text
  '(
-   ("%s" ((if feebleline-show-time (format-time-string "[%H:%M:%S] ") ""))
+   ("%s" ((if feebleline-show-time (format-time-string feebleline-format-time-string) ""))
     (face feebleline-time-face))
    ("%s"
     ((if feebleline-show-linenum
