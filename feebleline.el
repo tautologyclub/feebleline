@@ -78,7 +78,7 @@
 (defvar feebleline--msg-timer)
 (defvar feebleline/mode-line-format-previous)
 
-(defface feebleline-git-branch-face '((t :foreground "#444444" :italic t))
+(defface feebleline-git-face '((t :foreground "#444444" :italic t))
   "Example face for git branch."
   :group 'feebleline)
 
@@ -118,6 +118,13 @@
       (file-name-nondirectory (buffer-file-name))
     (buffer-name)))
 
+(defun feebleline-git-object ()
+  "Current branch, when magit is available."
+  (when (and (require 'magit-git nil t)
+             (require 'magit-process nil t))
+    (or (magit-get-current-branch) ; may return nil when not on a branch
+        (magit-rev-parse "--short" "HEAD"))))
+
 (defun feebleline-file-modified-star ()
   "Display star if buffer file was modified."
   (when (and (buffer-file-name) (buffer-modified-p)) "*"))
@@ -139,7 +146,7 @@
    (feebleline-file-directory      ((face . feebleline-dir-face)    (post . "")))
    (feebleline-file-or-buffer-name ((face . font-lock-keyword-face) (post . "")))
    (feebleline-file-modified-star  ((face . font-lock-warning-face) (post . "")))
-   (magit-get-current-branch       ((face . feebleline-git-branch-face) (pre . " - ")))
+   (feebleline-git-object          ((face . feebleline-git-face) (pre . " - ")))
    ;; (feebleline-project-name        ((right-align . t)))
    ))
 
