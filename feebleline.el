@@ -96,13 +96,11 @@
 
 (defun feebleline-line-number ()
   "Line number as string."
-  (if (buffer-file-name)
-      (format "%s" (line-number-at-pos))))
+  (format "%s" (line-number-at-pos)))
 
 (defun feebleline-column-number ()
   "Column number as string."
-  (if (buffer-file-name)
-      (format "%s" (current-column))))
+  (format "%s" (current-column)))
 
 (defun feebleline-file-directory ()
   "Current directory, if buffer is displaying a file."
