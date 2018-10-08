@@ -118,8 +118,8 @@
 
 (defun feebleline-git-object ()
   "Current branch, when magit is available."
-  (when (and (require 'magit-git nil t)
-             (require 'magit-process nil t))
+  (when (and (fboundp 'magit-get-current-branch)
+             (fboundp 'magit-rev-parse))
     (or (magit-get-current-branch) ; may return nil when not on a branch
         (magit-rev-parse "--short" "HEAD"))))
 
