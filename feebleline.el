@@ -76,7 +76,7 @@
 
 (defvar feebleline--home-dir nil)
 (defvar feebleline--msg-timer)
-(defvar feebleline/mode-line-format-previous)
+(defvar feebleline--mode-line-format-previous)
 
 (defface feebleline-git-branch-face '((t :foreground "#444444" :italic t))
   "Example face for git branch."
@@ -96,21 +96,18 @@
 
 (defun feebleline-line-number ()
   "Line number as string."
-  (if (buffer-file-name)
-      (format "%s" (line-number-at-pos))))
+  (when (buffer-file-name) (format "%s" (line-number-at-pos))))
 
 (defun feebleline-column-number ()
   "Column number as string."
-  (if (buffer-file-name)
-      (format "%s" (current-column))))
+  (when (buffer-file-name) (format "%s" (current-column))))
 
 (defun feebleline-file-directory ()
   "Current directory, if buffer is displaying a file."
-  (if (buffer-file-name)
-      (replace-regexp-in-string
-       (concat "^" feebleline--home-dir) "~"
-       default-directory)
-    ""))
+  (when (buffer-file-name)
+    (replace-regexp-in-string
+     (concat "^" feebleline--home-dir) "~"
+     default-directory)))
 
 (defun feebleline-file-or-buffer-name ()
   "Current file, or just buffer name if not a file."
@@ -167,46 +164,53 @@
   "Some default settings for EMACS < 25."
   (set-face-attribute 'mode-line nil :height 0.1))
 
-(defun feebleline--insert ()
-  "Insert stuff into the mini buffer."
+(defun feebleline--insert-ignore-errors ()
+  "Insert stuff into the echo area, ignoring potential errors."
   (unless (current-message)
-    (let ((tmp-string ""))
-      (dolist (idx feebleline-msg-functions)
-        (let ((string-func (car idx))
-              (props (cadr  idx)))
-          (let ((msg (apply string-func nil))
-                (string-face (cdr (assoc 'face props)))
-                (pre (cdr (assoc 'pre props)))
-                (post (cdr (assoc 'post props)))
-                (fmt (cdr (assoc 'fmt props)))
-                (right-align (cdr (assoc 'right-align props)))
-                )
-            (when msg
-              (unless string-face (setq string-face 'default))
-              (unless post (setq post " "))
-              (unless fmt (setq fmt "%s"))
-              (when right-align
-                (setq fmt
-                 (concat "%"
-                         (format "%s" (- (window-width) (length tmp-string) 1))
-                                  "s"))
-                ;; (message "%s" fmt)
-                )
-              (setq tmp-string
-                    (concat
-                     tmp-string
-                     (propertize
-                      (concat pre (format fmt msg) post)
-                          'face string-face)))))))
-      (with-current-buffer " *Minibuf-0*"
-        (erase-buffer)
-        (insert tmp-string)))))
+    (condition-case nil (feebleline--insert)
+      (error nil))))
+
+(defun feebleline--force-insert ()
+  "Insert stuff into the echo area even if it's displaying something."
+  (condition-case nil (feebleline--clear-echo-area)
+    (error nil)))
+
+(defun feebleline--fmt-string-right-align (string-to-align)
+  "Format string usable for right-aligning STRING-TO-ALIGN."
+  (concat "%" (format "%s" (- (window-width) (length string-to-align) 1)) "s"))
+
+(defvar feebleline--minibuf " *Minibuf-0*")
+
+(defun feebleline--insert ()
+  "Insert stuff into the echo area."
+  (let ((tmp-string ""))
+    (dolist (element feebleline-msg-functions)
+      (let ((string-func (car element))
+            (props (cadr  element)))
+        (let ((msg (apply string-func nil))
+              (string-face (cdr (assoc 'face props)))
+              (pre (cdr (assoc 'pre props)))
+              (post (cdr (assoc 'post props)))
+              (fmt (cdr (assoc 'fmt props)))
+              (right-align (cdr (assoc 'right-align props))))
+          (when msg
+            (unless string-face (setq string-face 'default))
+            (unless post (setq post " "))
+            (unless fmt (setq fmt "%s"))
+            (when right-align
+              (setq fmt (feebleline--fmt-string-right-align tmp-string)))
+            (setq tmp-string
+                  (concat tmp-string
+                          (propertize (concat pre (format fmt msg) post)
+                                      'face string-face)))))))
+    (with-current-buffer feebleline--minibuf
+      (erase-buffer)
+      (insert tmp-string))))
 
 (defun feebleline--clear-echo-area ()
   "Erase echo area."
-  (with-current-buffer " *Minibuf-0*"
-    (erase-buffer))
-  )
+  (with-current-buffer feebleline--minibuf
+    (erase-buffer)))
 
 ;;;###autoload
 (define-minor-mode feebleline-mode
@@ -217,26 +221,23 @@
       ;; Activation:
       (progn
         (setq feebleline--home-dir (expand-file-name "~"))
-        (setq feebleline/mode-line-format-previous mode-line-format)
-        (setq feebleline--msg-timer (run-with-timer 0 feebleline-timer-interval 'feebleline--insert))
+        (setq feebleline--mode-line-format-previous mode-line-format)
+        (setq feebleline--msg-timer
+              (run-with-timer 0 feebleline-timer-interval
+                              'feebleline--insert-ignore-errors))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        (add-hook 'focus-in-hook 'feebleline--insert)
-        )
+        (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
 
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
-    (setq-default mode-line-format feebleline/mode-line-format-previous)
-    (setq mode-line-format feebleline/mode-line-format-previous)
+    (setq-default mode-line-format feebleline--mode-line-format-previous)
+    (setq mode-line-format feebleline--mode-line-format-previous)
     (cancel-timer feebleline--msg-timer)
-    (remove-hook 'focus-in-hook 'feebleline--insert)
+    (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
 
-
-
-
-                                        ;
 (provide 'feebleline)
 ;;; feebleline.el ends here
