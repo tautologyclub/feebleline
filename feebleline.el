@@ -136,7 +136,7 @@
    (feebleline-file-directory      :face feebleline-dir-face :post "")
    (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
    (feebleline-file-modified-star  :face font-lock-warning-face :post "")
-   (magit-get-current-branch       :face feebleline-git-face :pre " - ")
+   ;; (magit-get-current-branch       :face feebleline-git-face :pre " - ")
    ;; (feebleline-project-name        :right-align t)
    ))
 
