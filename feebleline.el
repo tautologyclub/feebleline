@@ -49,15 +49,15 @@
 
 ;; The elements should be functions, accepting no arguments, returning either
 ;; nil or a valid string. Even lambda functions work (but don't forget to quote
-;; them). Optionally, you can include an alist after each function, like so:
+;; them). Optionally, you can include keywords  after each function, like so:
 
-;; (feebleline-line-number ((post . "") (fmt . "%5s")))
+;; (feebleline-line-number :post "" :fmt "%5s")
 
 ;; Accepted keys are pre, post, face, fmt and right-align (last one is
 ;; experimental). See source code for inspiration.
 
 ;;; Code:
-
+(require 'cl-macs)
 (defcustom feebleline-msg-functions nil
   "Fixme -- document me."
   :type  'list
@@ -78,7 +78,7 @@
 (defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
 
-(defface feebleline-git-branch-face '((t :foreground "#444444" :italic t))
+(defface feebleline-git-face '((t :foreground "#444444" :italic t))
   "Example face for git branch."
   :group 'feebleline)
 
@@ -96,11 +96,11 @@
 
 (defun feebleline-line-number ()
   "Line number as string."
-  (when (buffer-file-name) (format "%s" (line-number-at-pos))))
+  (format "%s" (line-number-at-pos)))
 
 (defun feebleline-column-number ()
   "Column number as string."
-  (when (buffer-file-name) (format "%s" (current-column))))
+  (format "%s" (current-column)))
 
 (defun feebleline-file-directory ()
   "Current directory, if buffer is displaying a file."
@@ -131,13 +131,13 @@
 ;; Shortly, it's shite.
 (setq
  feebleline-msg-functions
- '((feebleline-line-number         ((post . "") (fmt . "%5s")))
-   (feebleline-column-number       ((pre . ":") (fmt . "%-2s")))
-   (feebleline-file-directory      ((face . feebleline-dir-face)    (post . "")))
-   (feebleline-file-or-buffer-name ((face . font-lock-keyword-face) (post . "")))
-   (feebleline-file-modified-star  ((face . font-lock-warning-face) (post . "")))
-   (magit-get-current-branch       ((face . feebleline-git-branch-face) (pre . " - ")))
-   ;; (feebleline-project-name        ((right-align . t)))
+ '((feebleline-line-number         :post "" :fmt "%5s")
+   (feebleline-column-number       :pre ":" :fmt "%-2s")
+   (feebleline-file-directory      :face feebleline-dir-face :post "")
+   (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
+   (feebleline-file-modified-star  :face font-lock-warning-face :post "")
+   (magit-get-current-branch       :face feebleline-git-face :pre " - ")
+   ;; (feebleline-project-name        :right-align t)
    ))
 
 (defmacro feebleline-append-msg-function (&rest b)
@@ -148,9 +148,9 @@
   "Macro for adding B to the feebleline mode-line, at the beginning."
   `(add-to-list 'feebleline-msg-functions ,@b nil (lambda (x y) nil)))
 
-;; (feebleline-append-msg-function '((lambda () "end") ((pre . "/"))))
-;; (feebleline-append-msg-function '(magit-get-current-branch ((pre . "/"))))
-;; (feebleline-prepend-msg-function '((lambda () "-") ((post . "/"))))
+;; (feebleline-append-msg-function '((lambda () "end") :pre "//"))
+;; (feebleline-append-msg-function '(magit-get-current-branch :post "<-- branch lolz"))
+;; (feebleline-prepend-msg-function '((lambda () "-") :face hey-i-want-some-new-fae))
 
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
@@ -164,6 +164,7 @@
   "Some default settings for EMACS < 25."
   (set-face-attribute 'mode-line nil :height 0.1))
 
+;; disabled, because we really shouldn't silently fail
 (defun feebleline--insert-ignore-errors ()
   "Insert stuff into the echo area, ignoring potential errors."
   (unless (current-message)
@@ -181,31 +182,31 @@
 
 (defvar feebleline--minibuf " *Minibuf-0*")
 
+(cl-defun feebleline--insert-func (func &key (face 'default) pre (post " ") (fmt "%s") right-align)
+  "Format an element of feebleline-msg-functions based on its properties."
+  (when right-align
+    (setq fmt (concat "%"
+                      (format "%s" (- (window-width) (length tmp-string) 1))
+                      "s")))
+  (let* ((msg (apply func nil))
+         (string (concat pre (format fmt msg) post)))
+    (if msg
+        (if face
+            (propertize string 'face face)
+          string)
+      "")))
+
 (defun feebleline--insert ()
-  "Insert stuff into the echo area."
-  (let ((tmp-string ""))
-    (dolist (element feebleline-msg-functions)
-      (let ((string-func (car element))
-            (props (cadr  element)))
-        (let ((msg (apply string-func nil))
-              (string-face (cdr (assoc 'face props)))
-              (pre (cdr (assoc 'pre props)))
-              (post (cdr (assoc 'post props)))
-              (fmt (cdr (assoc 'fmt props)))
-              (right-align (cdr (assoc 'right-align props))))
-          (when msg
-            (unless string-face (setq string-face 'default))
-            (unless post (setq post " "))
-            (unless fmt (setq fmt "%s"))
-            (when right-align
-              (setq fmt (feebleline--fmt-string-right-align tmp-string)))
-            (setq tmp-string
-                  (concat tmp-string
-                          (propertize (concat pre (format fmt msg) post)
-                                      'face string-face)))))))
-    (with-current-buffer feebleline--minibuf
-      (erase-buffer)
-      (insert tmp-string))))
+  "Insert stuff into the mini buffer."
+  (unless (current-message)
+    (let ((tmp-string ""))
+      (dolist (idx feebleline-msg-functions)
+        (setq tmp-string
+              (concat tmp-string
+                      (apply 'feebleline--insert-func idx))))
+      (with-current-buffer " *Minibuf-0*"
+        (erase-buffer)
+        (insert tmp-string)))))
 
 (defun feebleline--clear-echo-area ()
   "Erase echo area."
@@ -224,17 +225,17 @@
         (setq feebleline--mode-line-format-previous mode-line-format)
         (setq feebleline--msg-timer
               (run-with-timer 0 feebleline-timer-interval
-                              'feebleline--insert-ignore-errors))
+                              'feebleline--insert))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
+        (add-hook 'focus-in-hook 'feebleline--insert))
 
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
     (setq mode-line-format feebleline--mode-line-format-previous)
     (cancel-timer feebleline--msg-timer)
-    (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
+    (remove-hook 'focus-in-hook 'feebleline--insert)
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
