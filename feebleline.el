@@ -199,7 +199,7 @@ Returns a pair with desired column and string."
                (align (car fragment))
                (string (cadr fragment)))
           (push string (symbol-value align))))
-      (with-current-buffer " *Minibuf-0*"
+      (with-current-buffer feebleline--minibuf
         (erase-buffer)
         (let* ((left-string (string-join (reverse left)))
                (right-string (string-join (reverse right)))
