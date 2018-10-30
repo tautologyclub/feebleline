@@ -53,8 +53,8 @@
 
 ;; (feebleline-line-number :post "" :fmt "%5s")
 
-;; Accepted keys are pre, post, face, fmt and right-align (last one is
-;; experimental). See source code for inspiration.
+;; Accepted keys are pre, post, face, fmt and align.
+;; See source code for inspiration.
 
 ;;; Code:
 (require 'cl-macs)
@@ -124,11 +124,10 @@
   (unless (string-equal "-" (projectile-project-name))
     (projectile-project-name)))
 
-;; -- TODO:
-;; right-align property doesn't work with post/pre and it also messes up other
-;; frames that don't have the same font size. Furthermore it has to be the last
-;; element of the list and no more than one element can have the property.
-;; Shortly, it's shite.
+;; align semantics may be a bit confusing as the user isn't required to
+;; put them in order (three formats may be specified with right, left and right alignments
+;; and feebleline will still figure out that the first and third formats should be joined
+;; together and put in the right column while the second one should be put in the left column).
 (setq
  feebleline-msg-functions
  '((feebleline-line-number         :post "" :fmt "%5s")
@@ -137,7 +136,7 @@
    (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
    (feebleline-file-modified-star  :face font-lock-warning-face :post "")
    ;; (magit-get-current-branch       :face feebleline-git-face :pre " - ")
-   ;; (feebleline-project-name        :right-align t)
+   ;; (feebleline-project-name        :align right)
    ))
 
 (defmacro feebleline-append-msg-function (&rest b)
@@ -176,37 +175,37 @@
   (condition-case nil (feebleline--clear-echo-area)
     (error nil)))
 
-(defun feebleline--fmt-string-right-align (string-to-align)
-  "Format string usable for right-aligning STRING-TO-ALIGN."
-  (concat "%" (format "%s" (- (window-width) (length string-to-align) 1)) "s"))
-
 (defvar feebleline--minibuf " *Minibuf-0*")
 
-(cl-defun feebleline--insert-func (func &key (face 'default) pre (post " ") (fmt "%s") right-align)
-  "Format an element of feebleline-msg-functions based on its properties."
-  (when right-align
-    (setq fmt (concat "%"
-                      (format "%s" (- (window-width) (length tmp-string) 1))
-                      "s")))
-  (let* ((msg (apply func nil))
-         (string (concat pre (format fmt msg) post)))
-    (if msg
-        (if face
-            (propertize string 'face face)
-          string)
-      "")))
+(cl-defun feebleline--insert-func (func &key (face 'default) pre (post " ") (fmt "%s") (align 'left))
+  "Format an element of feebleline-msg-functions based on its properties.
+Returns a pair with desired column and string."
+  (list align
+        (let* ((msg (apply func nil))
+               (string (concat pre (format fmt msg) post)))
+          (if msg
+              (if face
+                  (propertize string 'face face)
+                string)
+            ""))))
 
 (defun feebleline--insert ()
   "Insert stuff into the mini buffer."
   (unless (current-message)
-    (let ((tmp-string ""))
+    (let ((left ())
+          (right ()))
       (dolist (idx feebleline-msg-functions)
-        (setq tmp-string
-              (concat tmp-string
-                      (apply 'feebleline--insert-func idx))))
-      (with-current-buffer " *Minibuf-0*"
+        (let* ((fragment (apply 'feebleline--insert-func idx))
+               (align (car fragment))
+               (string (cadr fragment)))
+          (push string (symbol-value align))))
+      (with-current-buffer feebleline--minibuf
         (erase-buffer)
-        (insert tmp-string)))))
+        (let* ((left-string (string-join (reverse left)))
+               (right-string (string-join (reverse right)))
+               (free-space (- (window-width) (length left-string) (length right-string)))
+               (padding (make-string (max 0 free-space) ?\ )))
+          (insert (concat left-string padding right-string)))))))
 
 (defun feebleline--clear-echo-area ()
   "Erase echo area."

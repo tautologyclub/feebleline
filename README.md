@@ -27,11 +27,19 @@ to see what you can do. An example init snippet would look something like:
 
     (use-package    feebleline
       :ensure       t
-      :custom       (feebleline-show-git-branch             t)
-                    (feebleline-show-dir                    t)
-                    (feebleline-show-time                   nil)
-                    (feebleline-show-previous-buffer        nil)
-      :config       (feebleline-mode 1))
+      :config       (setq feebleline-msg-functions
+                          '((feebleline-line-number         :post "" :fmt "%5s")
+                            (feebleline-column-number       :pre ":" :fmt "%-2s")
+                            (feebleline-file-directory      :face feebleline-dir-face :post "")
+                            (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
+                            (feebleline-file-modified-star  :face font-lock-warning-face :post "")
+                            (magit-get-current-branch       :face feebleline-git-face :pre " - ")
+                            (feebleline-project-name        :align right)))
+                    (feebleline-mode 1))
+
+The minibuffer should now show something similar to:
+
+        1:0  ~/feebleline/feebleline.el - development                                                feebleline
 
 ## Screenshots
 This is a screenshow from the latest version (yes that is my
