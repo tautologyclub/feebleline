@@ -91,6 +91,13 @@
 (defcustom feebleline-show-git-branch nil
   "Set this if you want to show the git branch in the modeline proxy."
   :group 'feebleline)
+(defcustom feebleline-git-branch-separator " : "
+  "Separator before the git branch string."
+  :group 'feebleline)
+(defcustom feebleline-git-branch-empty "(no git)"
+  "Show this string when directory is no under git control."
+  :group 'feebleline)
+
 (defcustom feebleline-show-previous-buffer nil
   "Set this if you want to show the previous 'buffer-name' in the modeline proxy."
   :group 'feebleline)
@@ -123,8 +130,8 @@ sent to `add-text-properties'.")
       (require 'esh-ext)
       (let ((git-output (magit-get-current-branch)))
         (if (> (length git-output) 0)
-            git-output
-          "(no branch)")))
+            (concat feebleline-git-branch-separator git-output)
+          (concat feebleline-git-branch-empty))))
 
   (message "Warning: Feebleline couldn't find magit! Using hacky version to obtain git branch.")
   (require 'esh-ext)
@@ -135,8 +142,8 @@ sent to `add-text-properties'.")
                (locate-dominating-file default-directory ".git"))
       (let ((git-output (shell-command-to-string (concat "cd " default-directory " && git branch | grep '\\*' | sed -e 's/^\\* //'"))))
         (if (> (length git-output) 0)
-            (substring git-output 0 -1)
-          "(no branch)")))))
+            (concat feebleline-git-branch-separator (substring git-output 0 -1)))
+        ((concat feebleline-git-branch-separator feebleline-git-branch-empty))))))
 
 (defvar feebleline--home-dir nil)
 
@@ -162,12 +169,12 @@ sent to `add-text-properties'.")
    ("%s" ((if (and (buffer-file-name) (buffer-modified-p)) "*"
             "" ))
     (face feebleline-asterisk-face))
-   ("%s" ((if feebleline-show-git-branch (concat " : " (feebleline--git-branch-string))
+   ("%s" ((if feebleline-show-git-branch (feebleline--git-branch-string)
             ""))
     (face feebleline-git-branch-face))
    ("%s" ((if feebleline-show-previous-buffer (concat " | " (feebleline-previous-buffer-name))
             ""))
-   (face feebleline-previous-buffer-face)))
+    (face feebleline-previous-buffer-face)))
  )
 
 
