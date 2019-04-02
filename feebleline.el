@@ -61,7 +61,7 @@
 
 (defun feebleline-git-branch ()
   "Return current git branch, unless file is remote."
-  (if (file-remote-p (buffer-file-name))
+  (if (and (buffer-file-name) (file-remote-p (buffer-file-name)))
       "-"
     (magit-get-current-branch)))
 
