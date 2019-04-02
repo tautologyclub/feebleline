@@ -202,10 +202,12 @@ Returns a pair with desired column and string."
       (with-current-buffer feebleline--minibuf
         (erase-buffer)
         (let* ((left-string (string-join (reverse left)))
+               (message-truncate-lines t)
+               (max-mini-window-height 1)
                (right-string (string-join (reverse right)))
                (free-space (- (window-width) (length left-string) (length right-string)))
                (padding (make-string (max 0 free-space) ?\ )))
-          (insert (concat left-string padding right-string)))))))
+          (insert (concat left-string (if right-string (concat padding right-string)))))))))
 
 (defun feebleline--clear-echo-area ()
   "Erase echo area."
@@ -224,17 +226,17 @@ Returns a pair with desired column and string."
         (setq feebleline--mode-line-format-previous mode-line-format)
         (setq feebleline--msg-timer
               (run-with-timer 0 feebleline-timer-interval
-                              'feebleline--insert))
+                              'feebleline--insert-ignore-errors))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        (add-hook 'focus-in-hook 'feebleline--insert))
+        (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
 
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
     (setq mode-line-format feebleline--mode-line-format-previous)
     (cancel-timer feebleline--msg-timer)
-    (remove-hook 'focus-in-hook 'feebleline--insert)
+    (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
