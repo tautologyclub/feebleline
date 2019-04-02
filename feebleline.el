@@ -58,7 +58,22 @@
 
 ;;; Code:
 (require 'cl-macs)
-(defcustom feebleline-msg-functions nil
+
+(defun feebleline-git-branch ()
+  "Return current git branch, unless file is remote."
+  (if (file-remote-p (buffer-file-name))
+      "-"
+    (magit-get-current-branch)))
+
+(defcustom feebleline-msg-functions
+  '((feebleline-line-number         :post "" :fmt "%5s")
+    (feebleline-column-number       :pre ":" :fmt "%-2s")
+    (feebleline-file-directory      :face feebleline-dir-face :post "")
+    (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
+    (feebleline-file-modified-star  :face font-lock-warning-face :post "")
+    (feebleline-git-branch          :face feebleline-git-face :pre " - ")
+    ;; (feebleline-project-name        :align right)
+    )
   "Fixme -- document me."
   :type  'list
   :group 'feebleline)
@@ -78,7 +93,7 @@
 (defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
 
-(defface feebleline-git-face '((t :foreground "#444444" :italic t))
+(defface feebleline-git-face '((t :foreground "#444444"))
   "Example face for git branch."
   :group 'feebleline)
 
@@ -123,21 +138,6 @@
   "Return projectile project name if exists, otherwise nil."
   (unless (string-equal "-" (projectile-project-name))
     (projectile-project-name)))
-
-;; align semantics may be a bit confusing as the user isn't required to
-;; put them in order (three formats may be specified with right, left and right alignments
-;; and feebleline will still figure out that the first and third formats should be joined
-;; together and put in the right column while the second one should be put in the left column).
-(setq
- feebleline-msg-functions
- '((feebleline-line-number         :post "" :fmt "%5s")
-   (feebleline-column-number       :pre ":" :fmt "%-2s")
-   (feebleline-file-directory      :face feebleline-dir-face :post "")
-   (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
-   (feebleline-file-modified-star  :face font-lock-warning-face :post "")
-   ;; (magit-get-current-branch       :face feebleline-git-face :pre " - ")
-   ;; (feebleline-project-name        :align right)
-   ))
 
 (defmacro feebleline-append-msg-function (&rest b)
   "Macro for adding B to the feebleline mode-line, at the end."
