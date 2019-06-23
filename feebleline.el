@@ -101,6 +101,10 @@
   "Example face for dir face."
   :group 'feebleline)
 
+(defface feebleline-function-error-face '((t :inherit 'font-lock-warning-face))
+  "Example face for function errors."
+  :group 'feebleline)
+
 (defun feebleline-linecol-string ()
   "Hey guy!"
   (format "%4s:%-2s" (format-mode-line "%l") (current-column)))
@@ -181,7 +185,15 @@
   "Format an element of feebleline-msg-functions based on its properties.
 Returns a pair with desired column and string."
   (list align
-        (let* ((msg (apply func nil))
+        (let* ((msg (condition-case-unless-debug err
+                        (apply func nil)
+                      (error
+                       (progn
+                         (setq face 'feebleline-function-error-face)
+                         (format-message "Error(%s)"
+                                         (if (symbolp func)
+                                             (symbol-name func)
+                                           "lambda"))))))
                (string (concat pre (format fmt msg) post)))
           (if msg
               (if face
