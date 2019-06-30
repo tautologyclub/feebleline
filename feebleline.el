@@ -58,6 +58,7 @@
 
 ;;; Code:
 (require 'cl-macs)
+(autoload 'magit-get-current-branch "magit")
 
 (defun feebleline-git-branch ()
   "Return current git branch, unless file is remote."
