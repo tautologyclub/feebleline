@@ -43,7 +43,7 @@ The minibuffer should now show something similar to:
         1:0  ~/feebleline/feebleline.el : development                                                feebleline
 
 ## Screenshots
-This is a screenshow from the latest version (yes that is my
+This is a screenshot from the latest version (yes that is my
 actual ugly day-to-day theme):
 
 ![ScreenShot](scrot_v1_1.png)
