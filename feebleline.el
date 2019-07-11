@@ -219,20 +219,10 @@ Returns a pair with desired column and string."
 
 (defun feebleline--count-windows ()
   "Total window count."
-  (save-selected-window
-    (let ((count 0)
-          (frame-len (length (frame-list)))
-          (current-frame-count 0)
-          (frame-counter 0))
-      (while (< frame-counter frame-len)
-        (setq current-frame-count (count-windows))
-        (setq count (+ count current-frame-count))
-        (let ((index 0))
-          (while (< index current-frame-count)
-            (other-window 1 t)
-            (setq index (+ index 1))))
-        (setq frame-counter (+ frame-counter 1)))
-      count)))
+  (let ((count 0))
+    (dolist (fn (frame-list))
+      (setq count (+ (length (window-list fn)) count)))
+    count))
 
 (defun feebleline--walk-through-windows (fnc)
   "Walk through all the windows once and execute callback FNC."
@@ -243,6 +233,7 @@ Returns a pair with desired column and string."
           (funcall fnc))
         (other-window 1 t)
         (setq index (+ index 1))))))
+
 
 ;;;###autoload
 (define-minor-mode feebleline-mode
