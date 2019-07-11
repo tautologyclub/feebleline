@@ -157,7 +157,9 @@
         window-divider-default-places (quote bottom-only))
   (window-divider-mode t)
   (setq-default mode-line-format nil)
-  (setq mode-line-format nil))
+  (feebleline--walk-through-windows
+   (lambda ()
+     (setq mode-line-format nil))))
 
 (defun feebleline-legacy-settings-on ()
   "Some default settings for EMACS < 25."
@@ -214,6 +216,34 @@ Returns a pair with desired column and string."
   (with-current-buffer feebleline--minibuf
     (erase-buffer)))
 
+
+(defun feebleline--count-windows ()
+  "Total window count."
+  (save-selected-window
+    (let ((count 0)
+          (frame-len (length (frame-list)))
+          (current-frame-count 0)
+          (frame-counter 0))
+      (while (< frame-counter frame-len)
+        (setq current-frame-count (count-windows))
+        (setq count (+ count current-frame-count))
+        (let ((index 0))
+          (while (< index current-frame-count)
+            (other-window 1 t)
+            (setq index (+ index 1))))
+        (setq frame-counter (+ frame-counter 1)))
+      count)))
+
+(defun feebleline--walk-through-windows (fnc)
+  "Walk through all the windows once and execute callback FNC."
+  (save-selected-window
+    (let ((index 0))
+      (while (< index (feebleline--count-windows))
+        (when fnc
+          (funcall fnc))
+        (other-window 1 t)
+        (setq index (+ index 1))))))
+
 ;;;###autoload
 (define-minor-mode feebleline-mode
   "Replace modeline with a slimmer proxy."
@@ -234,7 +264,9 @@ Returns a pair with desired column and string."
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
-    (setq mode-line-format feebleline--mode-line-format-previous)
+    (feebleline--walk-through-windows
+     (lambda ()
+       (setq mode-line-format feebleline--mode-line-format-previous)))
     (cancel-timer feebleline--msg-timer)
     (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
     (force-mode-line-update)
