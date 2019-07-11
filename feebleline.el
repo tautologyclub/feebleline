@@ -205,7 +205,7 @@ Returns a pair with desired column and string."
                (message-truncate-lines t)
                (max-mini-window-height 1)
                (right-string (string-join (reverse right)))
-               (free-space (- (window-width) (length left-string) (length right-string)))
+               (free-space (- (frame-width) (length left-string) (length right-string)))
                (padding (make-string (max 0 free-space) ?\ )))
           (insert (concat left-string (if right-string (concat padding right-string)))))))))
 
