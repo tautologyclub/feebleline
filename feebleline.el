@@ -155,7 +155,7 @@
   "Some default settings that works well with feebleline."
   (setq window-divider-default-bottom-width 1
         window-divider-default-places (quote bottom-only))
-  (window-divider-mode t)
+  (window-divider-mode 1)
   (setq-default mode-line-format nil)
   (setq mode-line-format nil))
 
@@ -232,6 +232,7 @@ Returns a pair with desired column and string."
         (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
 
     ;; Deactivation:
+    (window-divider-mode -1)
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
     (setq mode-line-format feebleline--mode-line-format-previous)
