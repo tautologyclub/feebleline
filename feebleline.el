@@ -135,9 +135,9 @@
   (when (and (buffer-file-name) (buffer-modified-p)) "*"))
 
 (defun feebleline-project-name ()
-  "Return projectile project name if exists, otherwise nil."
-  (unless (string-equal "-" (projectile-project-name))
-    (projectile-project-name)))
+  "Return project name if exists, otherwise nil."
+  (when (cdr (project-current))
+    (file-name-nondirectory (directory-file-name (cdr (project-current))))))
 
 (defmacro feebleline-append-msg-function (&rest b)
   "Macro for adding B to the feebleline mode-line, at the end."
