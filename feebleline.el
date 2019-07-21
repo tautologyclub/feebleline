@@ -157,7 +157,12 @@
         window-divider-default-places (quote bottom-only))
   (window-divider-mode t)
   (setq-default mode-line-format nil)
-  (mapc (lambda (frame) (mapc (lambda (window) (setq mode-line-format nil)) (window-list frame))) (frame-list)))
+  (mapc (lambda (frame)
+          (mapc (lambda (window)
+                  (with-selected-window window
+                    (setq mode-line-format nil)))
+                (window-list frame)))
+        (frame-list)))
 
 (defun feebleline-legacy-settings-on ()
   "Some default settings for EMACS < 25."
@@ -235,7 +240,12 @@ Returns a pair with desired column and string."
     ;; Deactivation:
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
-    (mapc (lambda (frame) (mapc (lambda (window) (setq mode-line-format feebleline--mode-line-format-previous)) (window-list frame))) (frame-list))
+    (mapc (lambda (frame)
+            (mapc (lambda (window)
+                    (with-selected-window window
+                      (setq mode-line-format feebleline--mode-line-format-previous)))
+                  (window-list frame)))
+          (frame-list))
     (cancel-timer feebleline--msg-timer)
     (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
     (force-mode-line-update)
