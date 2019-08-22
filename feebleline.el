@@ -98,6 +98,7 @@
 (defvar feebleline--home-dir nil)
 (defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
+(defvar feebleline--window-divider-previous)
 (defvar feebleline-last-error-shown nil)
 
 (defface feebleline-git-face '((t :foreground "#444444"))
@@ -162,7 +163,8 @@
   "Some default settings that works well with feebleline."
   (setq window-divider-default-bottom-width 1
         window-divider-default-places (quote bottom-only))
-  (window-divider-mode t)
+  (setq feebleline--window-divider-previous window-divider-mode)
+  (window-divider-mode 1)
   (setq-default mode-line-format nil)
   (walk-windows (lambda (window)
                   (with-selected-window window
@@ -242,8 +244,8 @@ Returns a pair with desired column and string."
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
         (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
-
     ;; Deactivation:
+    (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
     (walk-windows (lambda (window)
