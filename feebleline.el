@@ -58,6 +58,7 @@
 
 ;;; Code:
 (require 'cl-macs)
+(autoload 'magit-get-current-branch "magit")
 
 (defun feebleline-git-branch ()
   "Return current git branch, unless file is remote."
@@ -92,6 +93,7 @@
 (defvar feebleline--home-dir nil)
 (defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
+(defvar feebleline-last-error-shown nil)
 
 (defface feebleline-git-face '((t :foreground "#444444"))
   "Example face for git branch."
@@ -163,12 +165,13 @@
   "Some default settings for EMACS < 25."
   (set-face-attribute 'mode-line nil :height 0.1))
 
-;; disabled, because we really shouldn't silently fail
 (defun feebleline--insert-ignore-errors ()
   "Insert stuff into the echo area, ignoring potential errors."
   (unless (current-message)
-    (condition-case nil (feebleline--insert)
-      (error nil))))
+    (condition-case err (feebleline--insert)
+      (error (unless (equal feebleline-last-error-shown err)
+               (setq feebleline-last-error-shown err)
+               (message (format "feebleline error: %s" err)))))))
 
 (defun feebleline--force-insert ()
   "Insert stuff into the echo area even if it's displaying something."
