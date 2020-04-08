@@ -1,4 +1,3 @@
-
 ;;; feebleline.el --- Replace modeline with a slimmer proxy
 
 ;; Copyright 2018 Benjamin Lindqvist
@@ -28,15 +27,16 @@
 
 ;; For hardline Luddite editing!
 
-;; Feebleline removes the modeline and replaces it with a slimmer proxy
-;; version, which displays some basic information in the echo area
-;; instead.  This information is only displayed if the echo area is not used
-;; for anything else (but if you switch frame/window, it will replace whatever
-;; message is currently displayed).
+;; Feebleline removes the modeline and replaces it with a slimmer
+;; proxy version, which displays some basic information in the echo
+;; area instead.  This information is only displayed if the echo area
+;; is not used for anything else (but if you switch frame/window, it
+;; will replace whatever message is currently displayed).
 
-;; Feebleline now has a much improved customization interface. Simply set
-;; feebleline-msg-functions to whatever you want! Example:
+;; Feebleline can be customized using feebleline-msg-functions either
+;; manually or through the customize interface.
 
+;; Example:
 ;; (setq
 ;;  feebleline-msg-functions
 ;;  '((feebleline-line-number)
@@ -47,29 +47,11 @@
 ;;    (magit-get-current-branch)
 ;;    (projectile-project-name)))
 
-;; The elements should be functions, accepting no arguments, returning either
-;; nil or a valid string. Even lambda functions work (but don't forget to quote
-;; them). Optionally, you can include keywords  after each function, like so:
-
-;; (feebleline-line-number :post "" :fmt "%5s")
-
-;; Accepted keys are pre, post, face, fmt and align.
-;; See source code for inspiration.
+;; See the source code for inspiration.
 
 ;;; Code:
 (require 'cl-macs)
 (autoload 'magit-get-current-branch "magit")
-
-(defun feebleline-git-branch ()
-  "Return current git branch, unless file is remote."
-  (if (and (buffer-file-name) (file-remote-p (buffer-file-name)))
-      ""
-    (let ((branch (shell-command-to-string
-                   "git rev-parse --symbolic-full-name --abbrev-ref HEAD 2>/dev/null")))
-      (string-trim (replace-regexp-in-string
-                    "^HEAD" "(detached HEAD)"
-                    branch)))
-    ))
 
 (defcustom feebleline-msg-functions
   '((feebleline-line-number         :post "" :fmt "%5s")
@@ -80,7 +62,13 @@
     (feebleline-git-branch          :face feebleline-git-face :pre " - ")
     ;; (feebleline-project-name        :align right)
     )
-  "Fixme -- document me."
+  "List of functions to call for feebleline display.
+The elements should be functions (including lambdas), accepting
+no arguments, returning either nil or a valid string. These
+functions can optionally include the keywords pre, post, face,
+fmt and align, like so:
+
+(feebleline-line-number :post "" :fmt "%5s")"
   :type  'list
   :group 'feebleline)
 
@@ -92,8 +80,15 @@
 (defcustom feebleline-use-legacy-settings nil
   "Hacky settings only applicable to releases older than 25."
   :type  'boolean
-  :group 'feebleline
-  )
+  :group 'feebleline)
+
+(defface feebleline-git-face '((t :foreground "#444444"))
+  "Feebleline git branch face."
+  :group 'feebleline)
+
+(defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
+  "Feebleline directory face."
+  :group 'feebleline)
 
 (defvar feebleline--home-dir nil)
 (defvar feebleline--msg-timer)
@@ -101,16 +96,8 @@
 (defvar feebleline--window-divider-previous)
 (defvar feebleline-last-error-shown nil)
 
-(defface feebleline-git-face '((t :foreground "#444444"))
-  "Example face for git branch."
-  :group 'feebleline)
-
-(defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
-  "Example face for dir face."
-  :group 'feebleline)
-
 (defun feebleline-linecol-string ()
-  "Hey guy!"
+  "Get current line and column."
   (format "%4s:%-2s" (format-mode-line "%l") (current-column)))
 
 (defun feebleline-previous-buffer-name ()
@@ -142,6 +129,16 @@
   "Display star if buffer file was modified."
   (when (and (buffer-file-name) (buffer-modified-p)) "*"))
 
+(defun feebleline-git-branch ()
+  "Return current git branch, unless file is remote."
+  (if (and (buffer-file-name) (file-remote-p (buffer-file-name)))
+      ""
+    (let ((branch (shell-command-to-string
+                   "git rev-parse --symbolic-full-name --abbrev-ref HEAD 2>/dev/null")))
+      (string-trim (replace-regexp-in-string
+                    "^HEAD" "(detached HEAD)"
+                    branch)))))
+
 (defun feebleline-project-name ()
   "Return project name if exists, otherwise nil."
   (when (cdr (project-current))
@@ -154,10 +151,6 @@
 (defmacro feebleline-prepend-msg-function (&rest b)
   "Macro for adding B to the feebleline mode-line, at the beginning."
   `(add-to-list 'feebleline-msg-functions ,@b nil (lambda (x y) nil)))
-
-;; (feebleline-append-msg-function '((lambda () "end") :pre "//"))
-;; (feebleline-append-msg-function '(magit-get-current-branch :post "<-- branch lolz"))
-;; (feebleline-prepend-msg-function '((lambda () "-") :face hey-i-want-some-new-fae))
 
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
