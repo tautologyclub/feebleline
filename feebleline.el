@@ -58,6 +58,7 @@
 
 ;;; Code:
 (require 'cl-macs)
+(require 'subr-x)
 (autoload 'magit-get-current-branch "magit")
 
 (defun feebleline-git-branch ()
