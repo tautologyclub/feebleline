@@ -57,6 +57,7 @@
 ;; See source code for inspiration.
 
 ;;; Code:
+(require 'seq)
 (require 'cl-macs)
 (autoload 'magit-get-current-branch "magit")
 
@@ -166,10 +167,11 @@
   (setq feebleline--window-divider-previous window-divider-mode)
   (window-divider-mode 1)
   (setq-default mode-line-format nil)
-  (walk-windows (lambda (window)
-                  (with-selected-window window
-                    (setq mode-line-format nil)))
-                nil t))
+  (dolist (buffer (seq-remove (lambda (buffer)
+                                (string-prefix-p " " (buffer-name buffer)))
+                              (buffer-list)))
+    (with-current-buffer buffer
+      (setq mode-line-format nil))))
 
 (defun feebleline-legacy-settings-on ()
   "Some default settings for EMACS < 25."
@@ -248,10 +250,11 @@ Returns a pair with desired column and string."
     (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
     (setq-default mode-line-format feebleline--mode-line-format-previous)
-    (walk-windows (lambda (window)
-                    (with-selected-window window
-                      (setq mode-line-format feebleline--mode-line-format-previous)))
-                  nil t)
+    (dolist (buffer (seq-remove (lambda (buffer)
+                                  (string-prefix-p " " (buffer-name buffer)))
+                                                   (buffer-list)))
+      (with-current-buffer buffer
+        (setq mode-line-format feebleline--mode-line-format-previous)))
     (cancel-timer feebleline--msg-timer)
     (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
     (force-mode-line-update)
