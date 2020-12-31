@@ -206,6 +206,7 @@ Returns a pair with desired column and string."
   "Insert stuff into the mini buffer."
   (unless (current-message)
     (let ((left ())
+          (center ())
           (right ()))
       (dolist (idx feebleline-msg-functions)
         (let* ((fragment (apply 'feebleline--insert-func idx))
@@ -218,9 +219,20 @@ Returns a pair with desired column and string."
                (message-truncate-lines t)
                (max-mini-window-height 1)
                (right-string (string-join (reverse right)))
-               (free-space (- (frame-width) (length left-string) (length right-string)))
-               (padding (make-string (max 0 free-space) ?\ )))
-          (insert (concat left-string (if right-string (concat padding right-string)))))))))
+               (center-string (string-join (reverse center)))
+               (length-left (length left-string))
+               (length-center (length center-string))
+               (length-right (length right-string))
+               (frame-width (frame-width))
+               (left-space (- (/ frame-width 2) length-left (/ length-center 2)))
+               (right-space (- frame-width length-left left-space length-center length-right))
+               ;; When one side of padding is completely consumed start removing
+               ;; padding from the opposite side
+               (left-space (+ left-space (min 0 right-space)))
+               (right-space (+ right-space (min 0 left-space)))
+               (left-padding (make-string (max 0 left-space) ?\ ))
+               (right-padding (make-string (max 0 right-space) ?\ )))
+          (insert (concat left-string left-padding center-string right-padding right-string)))))))
 
 (defun feebleline--clear-echo-area ()
   "Erase echo area."
