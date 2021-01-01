@@ -243,7 +243,11 @@ Returns a pair with desired column and string."
                               'feebleline--insert-ignore-errors))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors))
+        (if (string< emacs-version "27.1")
+            (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
+          (add-function :after
+                        after-focus-change-function
+                        'feebleline--insert-ignore-errors)))
     ;; Deactivation:
     (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
@@ -253,7 +257,9 @@ Returns a pair with desired column and string."
                       (setq mode-line-format feebleline--mode-line-format-previous)))
                   nil t)
     (cancel-timer feebleline--msg-timer)
-    (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
+    (if (string< emacs-version "27.1")
+        (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
+      (remove-function after-focus-change-function 'feebleline--insert-ignore-errors))
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
