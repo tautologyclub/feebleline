@@ -98,11 +98,11 @@
 (defvar feebleline--window-divider-previous)
 (defvar feebleline-last-error-shown nil)
 
-(defface feebleline-git-face '((t :foreground "#444444"))
+(defface feebleline-git '((t :foreground "#444444"))
   "Example face for git branch."
   :group 'feebleline)
 
-(defface feebleline-dir-face '((t :inherit 'font-lock-variable-name-face))
+(defface feebleline-dir '((t :inherit 'font-lock-variable-name-face))
   "Example face for dir face."
   :group 'feebleline)
 
