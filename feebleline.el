@@ -91,6 +91,14 @@
   :group 'feebleline
   )
 
+(defcustom feebleline-observed-hooks nil
+  "Hooks observed by feebleline for updates."
+  :type 'boolean
+  :group 'feebleline)
+
+(defun feebleline-observer (&rest _arguments)
+  (feebleline--debounced-insert))
+
 (defvar feebleline--home-dir nil)
 (defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
@@ -181,27 +189,26 @@
                (setq feebleline-last-error-shown err)
                (message (format "feebleline error: %s" err)))))))
 
-(defvar feebleline--focus-interval 0.1)
-(defvar feebleline--focus-timer)
-(fset  'feebleline--focus-guard #'ignore)
+(defvar feebleline--debounce-interval 0.5)
+(defvar feebleline--debounce-timer)
 
-(defun feebleline--insert-after-focus ()
+(defun feebleline--debounced-insert ()
   "Debounce invocations of `feebleline--insert-ignore-errors'.
 
 Invocations after the first invocation are debounced by
 `feebleline--focus-interval' seconds.  A debounced invocation
-also resets the timer."
-  (if (or (not (boundp 'feebleline--focus-timer))
-          (timer--triggered feebleline--focus-timer))
+also resets the timer.  Function is ran at the trailing end of
+the debounce."
+  (if (or (not (boundp 'feebleline--debounce-timer))
+          (timer--triggered feebleline--debounce-timer))
       (progn
-        (setq feebleline--focus-timer
-              (run-with-timer feebleline--focus-interval
+        (setq feebleline--debounce-timer
+              (run-with-timer feebleline--debounce-interval
                               nil
-                              'feebleline--focus-guard))
-        (feebleline--insert-ignore-errors))
-    (timer-set-time feebleline--focus-timer
+                              'feebleline--insert-ignore-errors)))
+    (timer-set-time feebleline--debounce-timer
                     (time-add (current-time)
-                              (seconds-to-time feebleline--focus-interval)))))
+                              (seconds-to-time feebleline--debounce-interval)))))
 
 (defun feebleline--force-insert ()
   "Insert stuff into the echo area even if it's displaying something."
@@ -277,16 +284,10 @@ MESSAGE-FUNCTION as a string with text properties added."
       (progn
         (setq feebleline--home-dir (expand-file-name "~"))
         (setq feebleline--mode-line-format-previous mode-line-format)
-        (setq feebleline--msg-timer
-              (run-with-timer 0 feebleline-timer-interval
-                              'feebleline--insert-ignore-errors))
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
-        (if (string< emacs-version "27.1")
-            (add-hook 'focus-in-hook 'feebleline--insert-after-focus)
-          (add-function :after
-                        after-focus-change-function
-                        'feebleline--insert-after-focus)))
+        (dolist (hook feebleline-observed-hooks)
+          (add-hook hook #'feebleline-observer)))
     ;; Deactivation:
     (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
@@ -296,10 +297,8 @@ MESSAGE-FUNCTION as a string with text properties added."
                                                    (buffer-list)))
       (with-current-buffer buffer
         (setq mode-line-format feebleline--mode-line-format-previous)))
-    (cancel-timer feebleline--msg-timer)
-    (if (string< emacs-version "27.1")
-        (remove-hook 'focus-in-hook 'feebleline--insert-after-focus)
-      (remove-function after-focus-change-function 'feebleline--insert-after-focus))
+    (dolist (hook feebleline-observed-hooks)
+      (remove-hook hook #'feebleline-observer))
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
