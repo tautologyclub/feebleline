@@ -180,6 +180,28 @@
                (setq feebleline-last-error-shown err)
                (message (format "feebleline error: %s" err)))))))
 
+(defvar feebleline--focus-interval 0.1)
+(defvar feebleline--focus-timer)
+(fset  'feebleline--focus-guard #'ignore)
+
+(defun feebleline--insert-after-focus ()
+  "Debounce invocations of `feebleline--insert-ignore-errors'.
+
+Invocations after the first invocation are debounced by
+`feebleline--focus-interval' seconds.  A debounced invocation
+also resets the timer."
+  (if (or (not (boundp 'feebleline--focus-timer))
+          (timer--triggered feebleline--focus-timer))
+      (progn
+        (setq feebleline--focus-timer
+              (run-with-timer feebleline--focus-interval
+                              nil
+                              'feebleline--focus-guard))
+        (feebleline--insert-ignore-errors))
+    (timer-set-time feebleline--focus-timer
+                    (time-add (current-time)
+                              (seconds-to-time feebleline--focus-interval)))))
+
 (defun feebleline--force-insert ()
   "Insert stuff into the echo area even if it's displaying something."
   (condition-case nil (feebleline--clear-echo-area)
@@ -253,10 +275,10 @@ Returns a pair with desired column and string."
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
         (if (string< emacs-version "27.1")
-            (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
+            (add-hook 'focus-in-hook 'feebleline--insert-after-focus)
           (add-function :after
                         after-focus-change-function
-                        'feebleline--insert-ignore-errors)))
+                        'feebleline--insert-after-focus)))
     ;; Deactivation:
     (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
@@ -267,8 +289,8 @@ Returns a pair with desired column and string."
                   nil t)
     (cancel-timer feebleline--msg-timer)
     (if (string< emacs-version "27.1")
-        (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)
-      (remove-function after-focus-change-function 'feebleline--insert-ignore-errors))
+        (remove-hook 'focus-in-hook 'feebleline--insert-after-focus)
+      (remove-function after-focus-change-function 'feebleline--insert-after-focus))
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
