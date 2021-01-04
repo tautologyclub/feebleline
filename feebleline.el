@@ -142,8 +142,9 @@
 
 (defun feebleline-project-name ()
   "Return project name if exists, otherwise nil."
-  (when (cdr (project-current))
-    (file-name-nondirectory (directory-file-name (cdr (project-current))))))
+  (let ((proj (project-current)))
+    (when proj
+      (file-name-nondirectory (directory-file-name (cdr proj))))))
 
 (defmacro feebleline-append-msg-function (&rest b)
   "Macro for adding B to the feebleline mode-line, at the end."
