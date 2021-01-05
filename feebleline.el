@@ -233,9 +233,7 @@ MESSAGE-FUNCTION as a string with text properties added."
   (setq feebleline--window-divider-previous window-divider-mode)
   (window-divider-mode 1)
   (setq-default mode-line-format nil)
-  (dolist (buffer (seq-remove (lambda (buffer)
-                                (string-prefix-p " " (buffer-name buffer)))
-                              (buffer-list)))
+  (dolist (buffer (seq-remove #'minibufferp (buffer-list)))
     (with-current-buffer buffer
       (setq mode-line-format nil)))
   (dolist (hook feebleline-observed-hooks)
@@ -246,9 +244,7 @@ MESSAGE-FUNCTION as a string with text properties added."
   (window-divider-mode feebleline--window-divider-previous)
   (set-face-attribute 'mode-line nil :height 1.0)
   (setq-default mode-line-format feebleline--mode-line-format-previous)
-  (dolist (buffer (seq-remove (lambda (buffer)
-                                (string-prefix-p " " (buffer-name buffer)))
-                              (buffer-list)))
+  (dolist (buffer (seq-remove #'minibufferp (buffer-list)))
     (with-current-buffer buffer
       (setq mode-line-format feebleline--mode-line-format-previous)))
   (dolist (hook feebleline-observed-hooks)
