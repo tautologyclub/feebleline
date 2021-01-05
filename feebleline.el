@@ -80,12 +80,6 @@
   :type  'list
   :group 'feebleline)
 
-(defcustom feebleline-use-legacy-settings nil
-  "Hacky settings only applicable to releases older than 25."
-  :type  'boolean
-  :group 'feebleline
-  )
-
 (defcustom feebleline-observed-hooks nil
   "Hooks observed by feebleline for updates."
   :type 'boolean
@@ -159,9 +153,6 @@
     (with-current-buffer buffer
       (setq mode-line-format nil))))
 
-(defun feebleline-legacy-settings-on ()
-  "Some default settings for EMACS < 25."
-  (set-face-attribute 'mode-line nil :height 0.1))
 
 (defun feebleline--insert-ignore-errors ()
   "Insert stuff into the echo area, ignoring potential errors."
@@ -260,8 +251,7 @@ MESSAGE-FUNCTION as a string with text properties added."
       ;; Activation:
       (progn
         (setq feebleline--mode-line-format-previous mode-line-format)
-        (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
-          (feebleline-default-settings-on))
+        (feebleline-default-settings-on)
         (dolist (hook feebleline-observed-hooks)
           (add-hook hook #'feebleline--observer)))
     ;; Deactivation:
