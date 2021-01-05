@@ -58,6 +58,7 @@
 
 ;;; Code:
 (require 'seq)
+(require 'subr-x)
 (autoload 'magit-get-current-branch "magit")
 (require 'vc-git)
 
