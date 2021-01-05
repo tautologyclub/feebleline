@@ -94,7 +94,7 @@
 (defun feebleline-observer (&rest _arguments)
   (feebleline--debounced-insert))
 
-(defvar feebleline--home-dir nil)
+(defvar feebleline--home-dir (expand-file-name "~"))
 (defvar feebleline--mode-line-format-previous)
 (defvar feebleline--window-divider-previous)
 (defvar feebleline-last-error-shown nil)
@@ -259,7 +259,6 @@ MESSAGE-FUNCTION as a string with text properties added."
   (if feebleline-mode
       ;; Activation:
       (progn
-        (setq feebleline--home-dir (expand-file-name "~"))
         (setq feebleline--mode-line-format-previous mode-line-format)
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
