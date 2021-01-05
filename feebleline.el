@@ -140,8 +140,9 @@
     (when proj
       (file-name-nondirectory (directory-file-name (cdr proj))))))
 
-(defun feebleline-default-settings-on ()
+(defun feebleline--mode-turn-on ()
   "Some default settings that works well with feebleline."
+  (setq feebleline--mode-line-format-previous mode-line-format)
   (setq window-divider-default-bottom-width 1
         window-divider-default-places (quote bottom-only))
   (setq feebleline--window-divider-previous window-divider-mode)
@@ -151,8 +152,25 @@
                                 (string-prefix-p " " (buffer-name buffer)))
                               (buffer-list)))
     (with-current-buffer buffer
-      (setq mode-line-format nil))))
+      (setq mode-line-format nil)))
+  (dolist (hook feebleline-observed-hooks)
+    (add-hook hook #'feebleline--observer)))
 
+(defun feebleline--mode-turn-off ()
+  "Disable feebleline settings."
+  (window-divider-mode feebleline--window-divider-previous)
+  (set-face-attribute 'mode-line nil :height 1.0)
+  (setq-default mode-line-format feebleline--mode-line-format-previous)
+  (dolist (buffer (seq-remove (lambda (buffer)
+                                (string-prefix-p " " (buffer-name buffer)))
+                              (buffer-list)))
+    (with-current-buffer buffer
+      (setq mode-line-format feebleline--mode-line-format-previous)))
+  (dolist (hook feebleline-observed-hooks)
+    (remove-hook hook #'feebleline--observer))
+  (force-mode-line-update)
+  (redraw-display)
+  (feebleline--clear-echo-area))
 
 (defun feebleline--insert-ignore-errors ()
   "Insert stuff into the echo area, ignoring potential errors."
@@ -248,26 +266,8 @@ MESSAGE-FUNCTION as a string with text properties added."
   :require 'feebleline
   :global t
   (if feebleline-mode
-      ;; Activation:
-      (progn
-        (setq feebleline--mode-line-format-previous mode-line-format)
-        (feebleline-default-settings-on)
-        (dolist (hook feebleline-observed-hooks)
-          (add-hook hook #'feebleline--observer)))
-    ;; Deactivation:
-    (window-divider-mode feebleline--window-divider-previous)
-    (set-face-attribute 'mode-line nil :height 1.0)
-    (setq-default mode-line-format feebleline--mode-line-format-previous)
-    (dolist (buffer (seq-remove (lambda (buffer)
-                                  (string-prefix-p " " (buffer-name buffer)))
-                                                   (buffer-list)))
-      (with-current-buffer buffer
-        (setq mode-line-format feebleline--mode-line-format-previous)))
-    (dolist (hook feebleline-observed-hooks)
-      (remove-hook hook #'feebleline--observer))
-    (force-mode-line-update)
-    (redraw-display)
-    (feebleline--clear-echo-area)))
+      (feebleline--mode-turn-on)
+    (feebleline--mode-turn-off)))
 
 (provide 'feebleline)
 ;;; feebleline.el ends here
