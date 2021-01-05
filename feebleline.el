@@ -58,7 +58,6 @@
 
 ;;; Code:
 (require 'seq)
-(require 'cl-macs)
 (autoload 'magit-get-current-branch "magit")
 (require 'vc-git)
 
@@ -211,17 +210,24 @@ also resets the timer."
 
 (defvar feebleline--minibuf " *Minibuf-0*")
 
-(cl-defun feebleline--insert-func (func &key (face 'default) pre (post " ") (fmt "%s") (align 'left))
-  "Format an element of feebleline-msg-functions based on its properties.
-Returns a pair with desired column and string."
-  (list align
-        (let* ((msg (apply func nil))
-               (string (concat pre (format fmt msg) post)))
-          (if msg
-              (if face
-                  (propertize string 'face face)
-                string)
-            ""))))
+
+(defun feebleline--format (message-function &rest properties)
+  "Format MESSAGE-FUNCTION based on its PROPERTIES.
+Returns a cons with desired alignment and result of
+MESSAGE-FUNCTION as a string with text properties added."
+  (let* ((arguments (plist-get properties :args))
+         (face (or (plist-get properties :face) 'default))
+         (alignment (or (plist-get properties :align) 'left))
+         (prefix (plist-get properties :pre))
+         (format (or (plist-get properties :fmt) "%s"))
+         (suffix (or (plist-get properties :post) " "))
+         (result (apply message-function arguments)))
+    (cons alignment
+          (when result
+            (propertize (concat prefix
+                                (format format result)
+                                suffix)
+                        'face face)))))
 
 (defun feebleline--insert ()
   "Insert stuff into the mini buffer."
@@ -230,9 +236,9 @@ Returns a pair with desired column and string."
           (center ())
           (right ()))
       (dolist (message-function feebleline-msg-functions)
-        (let* ((fragment (apply 'feebleline--insert-func message-function))
+        (let* ((fragment (apply 'feebleline--format message-function))
                (align (car fragment))
-               (string (cadr fragment)))
+               (string (cdr fragment)))
           (push string (symbol-value align))))
       (with-current-buffer feebleline--minibuf
         (erase-buffer)
