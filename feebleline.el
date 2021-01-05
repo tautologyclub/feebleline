@@ -91,7 +91,7 @@
   :type 'boolean
   :group 'feebleline)
 
-(defun feebleline-observer (&rest _arguments)
+(defun feebleline--observer (&rest _arguments)
   (feebleline--debounced-insert))
 
 (defvar feebleline--home-dir (expand-file-name "~"))
@@ -263,7 +263,7 @@ MESSAGE-FUNCTION as a string with text properties added."
         (if feebleline-use-legacy-settings (feebleline-legacy-settings-on)
           (feebleline-default-settings-on))
         (dolist (hook feebleline-observed-hooks)
-          (add-hook hook #'feebleline-observer)))
+          (add-hook hook #'feebleline--observer)))
     ;; Deactivation:
     (window-divider-mode feebleline--window-divider-previous)
     (set-face-attribute 'mode-line nil :height 1.0)
@@ -274,7 +274,7 @@ MESSAGE-FUNCTION as a string with text properties added."
       (with-current-buffer buffer
         (setq mode-line-format feebleline--mode-line-format-previous)))
     (dolist (hook feebleline-observed-hooks)
-      (remove-hook hook #'feebleline-observer))
+      (remove-hook hook #'feebleline--observer))
     (force-mode-line-update)
     (redraw-display)
     (feebleline--clear-echo-area)))
