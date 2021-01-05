@@ -80,11 +80,6 @@
   :type  'list
   :group 'feebleline)
 
-(defcustom feebleline-timer-interval 0.1
-  "Refresh interval of feebleline mode-line proxy."
-  :type  'float
-  :group 'feebleline)
-
 (defcustom feebleline-use-legacy-settings nil
   "Hacky settings only applicable to releases older than 25."
   :type  'boolean
@@ -100,7 +95,6 @@
   (feebleline--debounced-insert))
 
 (defvar feebleline--home-dir nil)
-(defvar feebleline--msg-timer)
 (defvar feebleline--mode-line-format-previous)
 (defvar feebleline--window-divider-previous)
 (defvar feebleline-last-error-shown nil)
@@ -152,18 +146,6 @@
     (when proj
       (file-name-nondirectory (directory-file-name (cdr proj))))))
 
-(defmacro feebleline-append-msg-function (&rest b)
-  "Macro for adding B to the feebleline mode-line, at the end."
-  `(add-to-list 'feebleline-msg-functions ,@b t (lambda (x y) nil)))
-
-(defmacro feebleline-prepend-msg-function (&rest b)
-  "Macro for adding B to the feebleline mode-line, at the beginning."
-  `(add-to-list 'feebleline-msg-functions ,@b nil (lambda (x y) nil)))
-
-;; (feebleline-append-msg-function '((lambda () "end") :pre "//"))
-;; (feebleline-append-msg-function '(magit-get-current-branch :post "<-- branch lolz"))
-;; (feebleline-prepend-msg-function '((lambda () "-") :face hey-i-want-some-new-fae))
-
 (defun feebleline-default-settings-on ()
   "Some default settings that works well with feebleline."
   (setq window-divider-default-bottom-width 1
@@ -209,11 +191,6 @@ the debounce."
     (timer-set-time feebleline--debounce-timer
                     (time-add (current-time)
                               (seconds-to-time feebleline--debounce-interval)))))
-
-(defun feebleline--force-insert ()
-  "Insert stuff into the echo area even if it's displaying something."
-  (condition-case nil (feebleline--clear-echo-area)
-    (error nil)))
 
 (defvar feebleline--minibuf " *Minibuf-0*")
 
