@@ -34,10 +34,10 @@
 ;; message is currently displayed).
 
 ;; Feebleline now has a much improved customization interface. Simply set
-;; feebleline-msg-functions to whatever you want! Example:
+;; feebleline-format-functions to whatever you want! Example:
 
 ;; (setq
-;;  feebleline-msg-functions
+;;  feebleline-format-functions
 ;;  '((feebleline-line-number)
 ;;    (feebleline-column-number)
 ;;    (feebleline-file-directory)
@@ -60,17 +60,21 @@
 (require 'subr-x)
 (require 'vc-git)
 
-(defcustom feebleline-msg-functions
+
+(define-obsolete-variable-alias
+  'feebleline-msg-functions
+  'feebleline-format-functions)
+
+(defcustom feebleline-format-functions
   '((feebleline-line-number         :post "" :fmt "%5s")
     (feebleline-column-number       :pre ":" :fmt "%-2s")
     (feebleline-file-directory      :face feebleline-dir-face :post "")
     (feebleline-file-or-buffer-name :face font-lock-keyword-face :post "")
     (feebleline-file-modified-star  :face font-lock-warning-face :post "")
     (feebleline-git-branch          :face feebleline-git-face :pre " - ")
-    ;; (feebleline-project-name        :align right)
-    )
-  "Fixme -- document me."
-  :type  'list
+    (feebleline-project-name        :align right))
+  "FIXME: Document me."
+  :type 'list
   :group 'feebleline)
 
 (defcustom feebleline-observed-hooks nil
@@ -191,8 +195,8 @@ MESSAGE-FUNCTION as a string with text properties added."
     (let ((left ())
           (center ())
           (right ()))
-      (dolist (message-function feebleline-msg-functions)
-        (let* ((fragment (apply 'feebleline--format message-function))
+      (dolist (format-function feebleline-format-functions)
+        (let* ((fragment (apply 'feebleline--format format-function))
                (align (car fragment))
                (string (cdr fragment)))
           (push string (symbol-value align))))
