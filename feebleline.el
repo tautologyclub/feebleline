@@ -1,4 +1,3 @@
-
 ;;; feebleline.el --- Replace modeline with a slimmer proxy
 
 ;; Copyright 2018 Benjamin Lindqvist
@@ -61,12 +60,6 @@
 (require 'subr-x)
 (require 'vc-git)
 
-(defun feebleline-git-branch ()
-  "Return current git branch, unless file is remote."
-  (let ((file-name (buffer-file-name)))
-    (unless (and file-name (file-remote-p file-name))
-      (car (vc-git-branches)))))
-
 (defcustom feebleline-msg-functions
   '((feebleline-line-number         :post "" :fmt "%5s")
     (feebleline-column-number       :pre ":" :fmt "%-2s")
@@ -85,14 +78,6 @@
   :type 'boolean
   :group 'feebleline)
 
-(defun feebleline--observer (&rest _arguments)
-  (feebleline--debounced-insert))
-
-(defvar feebleline--home-dir (expand-file-name "~"))
-(defvar feebleline--mode-line-format-previous)
-(defvar feebleline--window-divider-previous)
-(defvar feebleline-last-error-shown nil)
-
 (defface feebleline-git '((t :foreground "#444444"))
   "Example face for git branch."
   :group 'feebleline)
@@ -100,6 +85,23 @@
 (defface feebleline-dir '((t :inherit 'font-lock-variable-name-face))
   "Example face for dir face."
   :group 'feebleline)
+
+(defvar feebleline--home-dir (expand-file-name "~"))
+
+(defvar feebleline--mode-line-format-previous)
+(defvar feebleline--window-divider-previous)
+(defvar feebleline-last-error-shown nil)
+
+(defvar feebleline--debounce-interval 0.5)
+(defvar feebleline--debounce-timer)
+
+(defvar feebleline--minibuf " *Minibuf-0*")
+
+(defun feebleline-git-branch ()
+  "Return current git branch, unless file is remote."
+  (let ((file-name (buffer-file-name)))
+    (unless (and file-name (file-remote-p file-name))
+      (car (vc-git-branches)))))
 
 (defun feebleline-linecol-string ()
   "Hey guy!"
@@ -140,38 +142,6 @@
     (when proj
       (file-name-nondirectory (directory-file-name (cdr proj))))))
 
-(defun feebleline--mode-turn-on ()
-  "Some default settings that works well with feebleline."
-  (setq feebleline--mode-line-format-previous mode-line-format)
-  (setq window-divider-default-bottom-width 1
-        window-divider-default-places (quote bottom-only))
-  (setq feebleline--window-divider-previous window-divider-mode)
-  (window-divider-mode 1)
-  (setq-default mode-line-format nil)
-  (dolist (buffer (seq-remove (lambda (buffer)
-                                (string-prefix-p " " (buffer-name buffer)))
-                              (buffer-list)))
-    (with-current-buffer buffer
-      (setq mode-line-format nil)))
-  (dolist (hook feebleline-observed-hooks)
-    (add-hook hook #'feebleline--observer)))
-
-(defun feebleline--mode-turn-off ()
-  "Disable feebleline settings."
-  (window-divider-mode feebleline--window-divider-previous)
-  (set-face-attribute 'mode-line nil :height 1.0)
-  (setq-default mode-line-format feebleline--mode-line-format-previous)
-  (dolist (buffer (seq-remove (lambda (buffer)
-                                (string-prefix-p " " (buffer-name buffer)))
-                              (buffer-list)))
-    (with-current-buffer buffer
-      (setq mode-line-format feebleline--mode-line-format-previous)))
-  (dolist (hook feebleline-observed-hooks)
-    (remove-hook hook #'feebleline--observer))
-  (force-mode-line-update)
-  (redraw-display)
-  (feebleline--clear-echo-area))
-
 (defun feebleline--insert-ignore-errors ()
   "Insert stuff into the echo area, ignoring potential errors."
   (unless (current-message)
@@ -180,12 +150,8 @@
                (setq feebleline-last-error-shown err)
                (message (format "feebleline error: %s" err)))))))
 
-(defvar feebleline--debounce-interval 0.5)
-(defvar feebleline--debounce-timer)
-
 (defun feebleline--debounced-insert ()
   "Debounce invocations of `feebleline--insert-ignore-errors'.
-
 Invocations after the first invocation are debounced by
 `feebleline--focus-interval' seconds.  A debounced invocation
 also resets the timer.  Function is ran at the trailing end of
@@ -200,9 +166,6 @@ the debounce."
     (timer-set-time feebleline--debounce-timer
                     (time-add (current-time)
                               (seconds-to-time feebleline--debounce-interval)))))
-
-(defvar feebleline--minibuf " *Minibuf-0*")
-
 
 (defun feebleline--format (message-function &rest properties)
   "Format MESSAGE-FUNCTION based on its PROPERTIES.
@@ -259,6 +222,40 @@ MESSAGE-FUNCTION as a string with text properties added."
   (with-current-buffer feebleline--minibuf
     (erase-buffer)))
 
+(defun feebleline--observer (&rest _arguments)
+  (feebleline--debounced-insert))
+
+(defun feebleline--mode-turn-on ()
+  "Some default settings that works well with feebleline."
+  (setq feebleline--mode-line-format-previous mode-line-format)
+  (setq window-divider-default-bottom-width 1
+        window-divider-default-places (quote bottom-only))
+  (setq feebleline--window-divider-previous window-divider-mode)
+  (window-divider-mode 1)
+  (setq-default mode-line-format nil)
+  (dolist (buffer (seq-remove (lambda (buffer)
+                                (string-prefix-p " " (buffer-name buffer)))
+                              (buffer-list)))
+    (with-current-buffer buffer
+      (setq mode-line-format nil)))
+  (dolist (hook feebleline-observed-hooks)
+    (add-hook hook #'feebleline--observer)))
+
+(defun feebleline--mode-turn-off ()
+  "Disable feebleline settings."
+  (window-divider-mode feebleline--window-divider-previous)
+  (set-face-attribute 'mode-line nil :height 1.0)
+  (setq-default mode-line-format feebleline--mode-line-format-previous)
+  (dolist (buffer (seq-remove (lambda (buffer)
+                                (string-prefix-p " " (buffer-name buffer)))
+                              (buffer-list)))
+    (with-current-buffer buffer
+      (setq mode-line-format feebleline--mode-line-format-previous)))
+  (dolist (hook feebleline-observed-hooks)
+    (remove-hook hook #'feebleline--observer))
+  (force-mode-line-update)
+  (redraw-display)
+  (feebleline--clear-echo-area))
 
 ;;;###autoload
 (define-minor-mode feebleline-mode
