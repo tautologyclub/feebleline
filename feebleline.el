@@ -183,11 +183,11 @@ MESSAGE-FUNCTION as a string with text properties added."
          (suffix (or (plist-get properties :post) " "))
          (result (apply message-function arguments)))
     (cons alignment
-          (when result
-            (propertize (concat prefix
-                                (format format result)
-                                suffix)
-                        'face face)))))
+          (propertize (concat prefix
+                              (when result
+                                (format format result))
+                              suffix)
+                      'face face))))
 
 (defun feebleline--insert ()
   "Insert stuff into the mini buffer."
