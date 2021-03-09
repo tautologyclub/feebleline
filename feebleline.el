@@ -155,6 +155,22 @@
   "Macro for adding B to the feebleline mode-line, at the beginning."
   `(add-to-list 'feebleline-msg-functions ,@b nil (lambda (x y) nil)))
 
+(defun initialize-without-feebleline ()
+  "Neutralise `feebleline-mode', meant to be used in a hook,
+ before a conflictual command."
+  (when feebleline-mode
+    (cancel-timer feebleline--msg-timer)
+    (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)))
+
+(defun end-with-feebleline ()
+  "Restore `feebleline-mode', meant to be used in a hook,
+after a conflictual command."
+  (when feebleline-mode
+    (setq feebleline--msg-timer
+          (run-with-timer 0 feebleline-timer-interval
+                          'feebleline--insert-ignore-errors))
+    (add-hook 'focus-in-hook 'feebleline--insert-ignore-errors)))
+
 ;; (feebleline-append-msg-function '((lambda () "end") :pre "//"))
 ;; (feebleline-append-msg-function '(magit-get-current-branch :post "<-- branch lolz"))
 ;; (feebleline-prepend-msg-function '((lambda () "-") :face hey-i-want-some-new-fae))
