@@ -100,12 +100,6 @@
 (defvar feebleline--mode-line-format-previous)
 (defvar feebleline-last-error-shown nil)
 
-(defvar pils--feebleline-transient nil
-  "Store the transient state of `feebleline-mode',
-Used by `initialize-without-feebleline' and `end-with-feebleline',
-which can temporarly neutralize feebleline so another function may
-take control of the echo area.")
-
 (defface feebleline-git-face '((t :foreground "#444444"))
   "Example face for git branch."
   :group 'feebleline)
@@ -164,7 +158,6 @@ take control of the echo area.")
   "Neutralise `feebleline-mode', meant to be used in a hook,
  before a conflictual command."
   (when feebleline-mode
-    (setq feebleline-transient-state t)
     (cancel-timer feebleline--msg-timer)
     (remove-hook 'focus-in-hook 'feebleline--insert-ignore-errors)))
 
@@ -172,7 +165,6 @@ take control of the echo area.")
   "Restore `feebleline-mode', meant to be used in a hook,
 after a conflictual command."
   (when feebleline-mode
-    (setq feebleline-transient-state nil)
     (setq feebleline--msg-timer
           (run-with-timer 0 feebleline-timer-interval
                           'feebleline--insert-ignore-errors))
