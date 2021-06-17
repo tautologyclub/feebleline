@@ -62,7 +62,9 @@
 
 (defun feebleline-git-branch ()
   "Return current git branch, unless file is remote."
-  (if (and (buffer-file-name) (file-remote-p (buffer-file-name)))
+  (if (or (null (buffer-file-name))
+          (file-remote-p (buffer-file-name))
+          (tramp-tramp-file-p (buffer-file-name)))
       ""
     (let ((branch (shell-command-to-string
                    "git rev-parse --symbolic-full-name --abbrev-ref HEAD 2>/dev/null")))
